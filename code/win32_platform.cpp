@@ -1,21 +1,22 @@
-#include <windows.h>
-#include <stdint.h>
-
 #include "platform.h"
-
+#include <stdint.h>
+//
 typedef int8_t int8;
 typedef int16_t int16;
 typedef int32_t int32;
 typedef int64_t int64;
+//
 typedef int32 bool32;
-
+//
 typedef uint8_t uint8;
 typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint64_t uint64;
-
+//
 typedef float real32;
 typedef double real64;
+
+#include "central_piece.cpp"
 
 #define DINFO(msg) OutputDebugStringA("[ ] "msg"\n");
 #define DFAIL(msg) OutputDebugStringA("[-] "msg"\n");
@@ -23,6 +24,8 @@ typedef double real64;
 
 #define internal static
 #define global static
+
+#include <windows.h>
 
 #undef OutputDebugString
 #undef RegisterClass
@@ -149,6 +152,12 @@ WinMain(
 			0);
 		if(WindowHandle){
 			global_running=1;
+			offscreen_buffer Buffer = {};
+			Buffer.Memory = GlobalBackbuffer.Memory;
+			Buffer.Width = GlobalBackbuffer.Width;
+			Buffer.Height = GlobalBackbuffer.Height;
+			Buffer.Pitch = GlobalBackbuffer.Pitch;
+			UpdateAndRender(&Buffer);
 			while(global_running){
 				// windows messages
 				MSG Message;
@@ -156,6 +165,7 @@ WinMain(
 					TranslateMessage(&Message);
 					DispatchMessageA(&Message);
 				}
+				UpdateAndRender(&Buffer);
 			}
 		}
 	}

@@ -1,5 +1,6 @@
 #if !defined(CENTRAL_H)
 
+// NOTE(doc): may cause platform inefficiency
 struct offscreen_buffer{
 	void       *Memory;
 	int        Width;
