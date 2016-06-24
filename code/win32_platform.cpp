@@ -6,8 +6,9 @@
 #define bool32 int32_t
 
 #define internal static
-#define gloabal static
+#define global static
 
+global bool global_running=0;
 internal LRESULT CALLBACK
 WindowProc(
 	HWND   wnd,
@@ -17,6 +18,9 @@ WindowProc(
 ){
 	LRESULT Result = 0;
 	switch(Msg){
+		case WM_CLOSE:{
+			global_running=0;
+		}break;
 		default:{
 			// NOTE(doc): let window do his things 'cause some events need specific return values
 			Result=DefWindowProcA(wnd,Msg,WParam,LParam);
@@ -52,7 +56,8 @@ WinMain(
 			Instance,
 			0);
 		if(WindowHandle){
-			while(1){
+			global_running=1;
+			while(global_running){
 				// windows messages
 				MSG Message;
 				while(PeekMessageA(&Message,0,0,0,PM_REMOVE)){
