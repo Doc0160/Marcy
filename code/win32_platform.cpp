@@ -2,7 +2,14 @@
 #include <stdint.h>
 
 #include "central_piece.cpp"
-LRESULT CALLBACK WindowProc(
+
+#define bool32 int32_t
+
+#define internal static
+#define gloabal static
+
+internal LRESULT CALLBACK
+WindowProc(
 	HWND   wnd,
 	UINT   Msg,
 	WPARAM WParam,
@@ -17,7 +24,8 @@ LRESULT CALLBACK WindowProc(
 	}
 	return(Result);
 }
-int CALLBACK WinMain(
+internal int CALLBACK 
+WinMain(
 	HINSTANCE Instance,
 	HINSTANCE PrevInstance,
 	LPSTR     CmdLine,
@@ -44,7 +52,14 @@ int CALLBACK WinMain(
 			Instance,
 			0);
 		if(WindowHandle){
-			
+			while(1){
+				// windows messages
+				MSG Message;
+				while(PeekMessageA(&Message,0,0,0,PM_REMOVE)){
+					TranslateMessage(&Message);
+					DispatchMessageA(&Message);
+				}
+			}
 		}
 	}
 }
