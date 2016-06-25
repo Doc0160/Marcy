@@ -20,9 +20,9 @@ RenderWeirdGradient(offscreen_buffer *Backbuffer, int BlueOffset, int GreenOffse
     for(int Y = 0;Y<Backbuffer->Height;++Y){
         uint32 *Pixel = (uint32*)Row;
         for(int X = 0;X<Backbuffer->Width;++X){
-            uint8 Blue  = (X+BlueOffset);
-            uint8 Green = (Y+GreenOffset);
-            *Pixel++    = ((Green<<8)|Blue);
+            uint8 Blue  = (X + BlueOffset);
+            uint8 Green = (Y + GreenOffset);
+            *Pixel++    = ((Green << 8) | Blue);
         }
         Row += Backbuffer->Pitch;
     }

@@ -27,6 +27,18 @@ typedef double real64;
 
 #include <windows.h>
 
+#define Assert(x) \
+	do { if (!(x)) { __debugbreak(); } } while(0)
+
+void Debugf(char *format, ...){
+	char temp[1024];
+	va_list arg_list;
+	va_start(arg_list, format);
+	wvsprintfA(temp, format, arg_list);
+	va_end(arg_list);
+	OutputDebugStringA(temp);
+}
+
 #undef OutputDebugString
 #undef RegisterClass
 #undef DefWindowProc
@@ -53,7 +65,10 @@ struct win32_offscreen_buffer{
 global bool32 global_running = 0;
 global win32_offscreen_buffer GlobalBackbuffer = {};
 //
-internal window_dimension win32_GetWindowDimension(HWND wnd){
+internal window_dimension
+win32_GetWindowDimension(
+	HWND wnd
+){
 	window_dimension Result;
 	RECT ClientRect;
 	GetClientRect(wnd, &ClientRect);
@@ -62,7 +77,11 @@ internal window_dimension win32_GetWindowDimension(HWND wnd){
 	return(Result);
 }
 internal void
-win32_ResizeDIBSelection(win32_offscreen_buffer *Backbuffer,int Width, int Height){
+win32_ResizeDIBSelection(
+	win32_offscreen_buffer *Backbuffer,
+	int Width, 
+	int Height
+){
 	// TODO(doc): don't free first, free after then free first if that fails
 	if(Backbuffer->Memory){
 		VirtualFree(Backbuffer->Memory,0,MEM_RELEASE);
@@ -88,7 +107,12 @@ win32_ResizeDIBSelection(win32_offscreen_buffer *Backbuffer,int Width, int Heigh
 	// TODO(doc): maybe init to black
 }
 internal void
-win32_UpdateWindow(HDC DeviceContext, win32_offscreen_buffer *Backbuffer, int Width, int Height){
+win32_UpdateWindow(
+	HDC DeviceContext, 
+	win32_offscreen_buffer *Backbuffer, 
+	int Width, 
+	int Height
+){
 	StretchDIBits(DeviceContext,
 		0, 0, Width,             Height,             // to
 		0, 0, Backbuffer->Width, Backbuffer->Height, // from
@@ -136,6 +160,11 @@ WinMain(
 	WindowClass.hInstance   = Instance;
 	// WindowClass.hIcon         = ;
 	WindowClass.lpszClassName = "MARCY_WC";
+	//
+	LARGE_INTEGER PerfCountFrequencyResult;
+	QueryPerformanceFrequency(&PerfCountFrequencyResult);
+	int64 PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+	//
 	if(RegisterClassA(&WindowClass)){
 		HWND WindowHandle = CreateWindowExA(
 			0,
@@ -159,7 +188,10 @@ WinMain(
 			Buffer.Width = GlobalBackbuffer.Width;
 			Buffer.Height = GlobalBackbuffer.Height;
 			Buffer.Pitch = GlobalBackbuffer.Pitch;
-			UpdateAndRender(&Buffer);
+			//
+			LARGE_INTEGER LastCounter;
+			QueryPerformanceCounter(&LastCounter);
+			//
 			while(global_running){
 				// windows messages
 				MSG Message;
@@ -171,6 +203,15 @@ WinMain(
 				//
 				window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
 				win32_UpdateWindow(DeviceContext, &GlobalBackbuffer, Dimension.Width, Dimension.Height);
+				//
+				LARGE_INTEGER EndCounter;
+				QueryPerformanceCounter(&EndCounter);
+				//
+				int64 CounterElapsed = EndCounter.QuadPart-LastCounter.QuadPart;
+				int32 MSPerFrame = (int32)((1000 * CounterElapsed) / PerfCountFrequency);
+				Debugf("%d\n", MSPerFrame);
+				//
+				LastCounter=EndCounter;
 			}
 			// TODO(doc): maybe delete that, windows do it anyway ~~
 			ReleaseDC(WindowHandle, DeviceContext);

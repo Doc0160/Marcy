@@ -1,1 +1,1 @@
-devenv ./bin/main.exe
+devenv ./bin/win32_platform.exe
