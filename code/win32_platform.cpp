@@ -152,6 +152,8 @@ WinMain(
 			0);
 		if(WindowHandle){
 			global_running=1;
+			HDC DeviceContext = GetDC(WindowHandle);
+			//
 			offscreen_buffer Buffer = {};
 			Buffer.Memory = GlobalBackbuffer.Memory;
 			Buffer.Width = GlobalBackbuffer.Width;
@@ -166,7 +168,12 @@ WinMain(
 					DispatchMessageA(&Message);
 				}
 				UpdateAndRender(&Buffer);
+				//
+				window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
+				win32_UpdateWindow(DeviceContext, &GlobalBackbuffer, Dimension.Width, Dimension.Height);
 			}
+			// TODO(doc): maybe delete that, windows do it anyway ~~
+			ReleaseDC(WindowHandle, DeviceContext);
 		}
 	}
 }
