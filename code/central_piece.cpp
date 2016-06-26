@@ -20,6 +20,7 @@ UpdateAndRender(memory *Memory, input *Input, offscreen_buffer *Screen){
 	if(!Memory->IsInitialized){
 		State->BlueOffset = 0;
 		State->GreenOffset = 0;
+		Memory->IsInitialized=1;
 	}
 	if(Input->Up.EndedDown){
 		State->BlueOffset++;

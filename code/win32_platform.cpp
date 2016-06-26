@@ -173,6 +173,11 @@ WinMain(
 			GlobalRunning=1;
 			HDC DeviceContext = GetDC(WindowHandle);
 			//
+			memory Memory = {}; 
+			Memory.PermanentStorageSize = Megabytes(64);
+			Memory.PermanentStorage = VirtualAlloc(0, Memory.PermanentStorageSize, 
+				MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+			//
 			offscreen_buffer Buffer = {};
 			Buffer.Memory = GlobalBackbuffer.Memory;
 			Buffer.Width = GlobalBackbuffer.Width;
@@ -190,7 +195,7 @@ WinMain(
 					TranslateMessage(&Message);
 					DispatchMessageA(&Message);
 				}
-				UpdateAndRender(&GlobalInput, &Buffer);
+				UpdateAndRender(&Memory, &GlobalInput, &Buffer);
 				//
 				window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
 				win32_UpdateWindow(

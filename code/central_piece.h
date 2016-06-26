@@ -6,6 +6,12 @@
 	((x) <= (y) ? (x) : (y))
 #define MAX(x, y) \
 	((x) >= (y) ? (x) : (y))
+#define Kilobytes(value) \
+	((value)*1024)
+#define Megabytes(value) \
+	(Kilobytes(value)*1024)
+#define Gigabytes(value) \
+	(Megabytes(value)*1024)
 
 // NOTE(doc): may cause platform inefficiency
 struct offscreen_buffer{
