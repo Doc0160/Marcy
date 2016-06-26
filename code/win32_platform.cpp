@@ -209,7 +209,8 @@ WinMain(
 				//
 				int64 CounterElapsed = EndCounter.QuadPart-LastCounter.QuadPart;
 				int32 MSPerFrame = (int32)((1000 * CounterElapsed) / PerfCountFrequency);
-				Debugf("%d\n", MSPerFrame);
+				int32 FPS = PerfCountFrequency / CounterElapsed;
+				Debugf("%dmspf / %dfps\n", MSPerFrame, FPS);
 				//
 				LastCounter=EndCounter;
 			}
