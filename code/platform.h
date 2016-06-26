@@ -6,10 +6,12 @@
 
 #define Assert(x) \
 	do { if (!(x)) { __debugbreak(); } } while(0)
-
-#define DINFO(msg) OutputDebugStringA("[ ] "msg"\n");
-#define DFAIL(msg) OutputDebugStringA("[-] "msg"\n");
-#define DSUCCESS(msg) OutputDebugStringA("[+] "msg"\n");
+#define DINFO(msg) \
+	OutputDebugStringA("[ ] "msg"\n");
+#define DFAIL(msg) \
+	OutputDebugStringA("[-] "msg"\n");
+#define DSUCCESS(msg) \
+	OutputDebugStringA("[+] "msg"\n");
 
 #include <stdint.h>
 //

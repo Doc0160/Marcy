@@ -15,19 +15,22 @@ RenderWeirdGradient(offscreen_buffer *Backbuffer, int BlueOffset, int GreenOffse
 }
 
 internal void
-UpdateAndRender(input *Input, offscreen_buffer *Screen){
-	persist int x = 0;
-	persist int y = 0;
+UpdateAndRender(memory *Memory, input *Input, offscreen_buffer *Screen){
+	state *State = (state *)Memory->PermanentStorage;
+	if(!Memory->IsInitialized){
+		State->BlueOffset = 0;
+		State->GreenOffset = 0;
+	}
 	if(Input->Up.EndedDown){
-		y++;
+		State->BlueOffset++;
 	}else if(Input->Down.EndedDown){
-		y--;
+		State->BlueOffset--;
 	}
 	if(Input->Left.EndedDown){
-		x++;
+		State->GreenOffset++;
 	}else if(Input->Right.EndedDown){
-		x--;
+		State->GreenOffset--;
 	}
-	RenderWeirdGradient(Screen, x, y);
+	RenderWeirdGradient(Screen, State->GreenOffset, State->BlueOffset);
 }
 

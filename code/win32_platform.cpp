@@ -115,9 +115,9 @@ WindowProc(
 			}
 			if(WasDown != IsDown){
 				switch(VKCode){
-					/*case VK_ESCAPE:{
+					case VK_ESCAPE:{
 						GlobalRunning=false;
-					} break;*/
+					} break;
 					case VK_F4:{
 						if(AltKeyWasDown){
 							GlobalRunning=false;
@@ -150,6 +150,10 @@ WinMain(
 	LPSTR     CmdLine,
 	int       CmdShow
 ){
+	LARGE_INTEGER PerfCountFrequencyResult;
+	QueryPerformanceFrequency(&PerfCountFrequencyResult);
+	int64 PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+	//
 	WNDCLASSA WindowClass = {};
 	win32_ResizeDIBSelection(&GlobalBackbuffer, 1280/2, 720/2);
 	WindowClass.style       = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
@@ -157,10 +161,6 @@ WinMain(
 	WindowClass.hInstance   = Instance;
 	// WindowClass.hIcon         = ;
 	WindowClass.lpszClassName = "MARCY_WC";
-	//
-	LARGE_INTEGER PerfCountFrequencyResult;
-	QueryPerformanceFrequency(&PerfCountFrequencyResult);
-	int64 PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
 	//
 	if(RegisterClassA(&WindowClass)){
 		HWND WindowHandle = CreateWindowExA(
@@ -193,7 +193,10 @@ WinMain(
 				UpdateAndRender(&GlobalInput, &Buffer);
 				//
 				window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
-				win32_UpdateWindow(DeviceContext, &GlobalBackbuffer, Dimension.Width, Dimension.Height);
+				win32_UpdateWindow(
+					DeviceContext, &GlobalBackbuffer, 
+					Dimension.Width, Dimension.Height
+				);
 				//
 				int64 EndCycleCount = __rdtsc();
 				LARGE_INTEGER EndCounter;

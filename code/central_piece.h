@@ -1,10 +1,12 @@
 #if !defined(CENTRAL_H)
+
 #define ArrayCount(Array) \
 	(sizeof(Array) / sizeof((Array)[0]))
 #define MIN(x, y) \
 	((x) <= (y) ? (x) : (y))
 #define MAX(x, y) \
 	((x) >= (y) ? (x) : (y))
+
 // NOTE(doc): may cause platform inefficiency
 struct offscreen_buffer{
 	void       *Memory;
@@ -12,9 +14,10 @@ struct offscreen_buffer{
 	int        Height;
 	int        Pitch;
 };
+//
 struct input_button{
 	int HalfTransitionCount;
-	bool EndedDown;
+	bool32 EndedDown;
 };
 struct input{
 	union{
@@ -29,8 +32,21 @@ struct input{
 		};
 	};
 };
+//
+struct memory{
+	bool32 IsInitialized;
+	uint64 PermanentStorageSize;
+	void *PermanentStorage;
+};
+//
+//
+//
+struct state{
+	int BlueOffset;
+	int GreenOffset;
+};
 // timing ?, keyboard/mouse input, bitmap buffer to use
-void UpdateAndRender(input *Input, offscreen_buffer *Screen);
+void UpdateAndRender(memory *Memory, input *Input, offscreen_buffer *Screen);
 
 #define PLATFORM_H
 #endif
