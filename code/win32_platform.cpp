@@ -16,7 +16,6 @@ void Debugf(char *format, ...){
 //
 global bool32 GlobalRunning = 0;
 global win32_offscreen_buffer GlobalBackbuffer = {};
-global input GlobalInput = {};
 //
 internal DEBUG_read_file_result
 DEBUGPlatformReadEntireFile(char *Filename){
@@ -144,64 +143,7 @@ WindowProc(
 	LRESULT Result = 0;
 	switch(Msg){
 		case WM_CLOSE:{
-			GlobalRunning=0;
-		}break;
-		case WM_SYSKEYDOWN:
-        case WM_SYSKEYUP:
-		case WM_KEYUP:
-		case WM_KEYDOWN:{
-			uint32 VKCode = (uint32)WParam;
-            bool32 WasDown = ((LParam & (1 << 30)) != 0);
-            bool32 IsDown = ((LParam & (1 << 31)) == 0);
-			bool32 AltKeyWasDown = (LParam & (1 << 29));
-			switch(VKCode){
-				case VK_LEFT:
-				case 'Q':{
-					GlobalInput.Left.HalfTransitionCount=1;
-					GlobalInput.Left.EndedDown=IsDown;
-				} break;
-				case VK_RIGHT:
-				case 'D':{
-					GlobalInput.Right.HalfTransitionCount=1;
-					GlobalInput.Right.EndedDown=IsDown;
-				} break;
-				case VK_UP:
-				case 'Z':{
-					GlobalInput.Up.HalfTransitionCount=1;
-					GlobalInput.Up.EndedDown=IsDown;
-				} break;
-				case VK_DOWN:
-				case 'S':{
-					GlobalInput.Down.HalfTransitionCount=1;
-					GlobalInput.Down.EndedDown=IsDown;
-				} break;
-				case VK_RETURN:
-				case 'E':{
-					GlobalInput.Enter.HalfTransitionCount=1;
-					GlobalInput.Enter.EndedDown=IsDown;
-				} break;
-				case VK_BACK:
-				case 'A':{
-					GlobalInput.Back.HalfTransitionCount=1;
-					GlobalInput.Back.EndedDown=IsDown;
-				} break;
-				default:{
-				} break;
-			}
-			if(WasDown != IsDown){
-				switch(VKCode){
-					case VK_ESCAPE:{
-						GlobalRunning=false;
-					} break;
-					case VK_F4:{
-						if(AltKeyWasDown){
-							GlobalRunning=false;
-						}
-					} break;
-					default:{
-					} break;
-				}
-			}
+			GlobalRunning = 0;
 		} break;
 		case WM_PAINT:{
 			PAINTSTRUCT Paint;
@@ -219,6 +161,13 @@ WindowProc(
 	}
 	return(Result);
 }
+//
+internal void
+win32_ProcessKeyboardMessage(input_button *NewState, bool32 IsDown){
+	NewState->EndedDown = IsDown;
+	++NewState->HalfTransitionCount;
+}
+//
 int CALLBACK 
 WinMain(
 	HINSTANCE Instance,
@@ -272,6 +221,9 @@ WinMain(
 				Buffer.Height = GlobalBackbuffer.Height;
 				Buffer.Pitch = GlobalBackbuffer.Pitch;
 				//
+				input InputData = {};
+				input *Input = &InputData;
+				//
 				LARGE_INTEGER LastCounter;
 				QueryPerformanceCounter(&LastCounter);
 				int64 LastCycleCount = __rdtsc();
@@ -279,11 +231,73 @@ WinMain(
 				while(GlobalRunning){
 					// windows messages
 					MSG Message;
+					//
+					// input ZeroInput = {};
+					// *Input = ZeroInput;
+					//
 					while(PeekMessageA(&Message,0,0,0,PM_REMOVE)){
-						TranslateMessage(&Message);
-						DispatchMessageA(&Message);
+						switch(Message.message){
+							case WM_QUIT:{
+								GlobalRunning = 0;
+							} break;
+							case WM_SYSKEYDOWN:
+							case WM_SYSKEYUP:
+							case WM_KEYUP:
+							case WM_KEYDOWN:{
+								uint32 VKCode = (uint32)Message.wParam;
+								bool32 WasDown = ((Message.lParam & (1 << 30)) != 0);
+								bool32 IsDown = ((Message.lParam & (1 << 31)) == 0);
+								bool32 AltKeyWasDown = (Message.lParam & (1 << 29));
+								switch(VKCode){
+								case VK_LEFT:
+								case 'Q':{
+									win32_ProcessKeyboardMessage(&Input->Left, IsDown);
+								} break;
+								case VK_RIGHT:
+								case 'D':{
+									win32_ProcessKeyboardMessage(&Input->Right, IsDown);
+								} break;
+								case VK_UP:
+								case 'Z':{
+									win32_ProcessKeyboardMessage(&Input->Up, IsDown);
+								} break;
+								case VK_DOWN:
+								case 'S':{
+									win32_ProcessKeyboardMessage(&Input->Down, IsDown);
+								} break;
+								case VK_RETURN:
+								case 'E':{
+									win32_ProcessKeyboardMessage(&Input->Enter, IsDown);
+								} break;
+								case VK_BACK:
+								case 'A':{
+									win32_ProcessKeyboardMessage(&Input->Back, IsDown);
+								} break;
+								default:{
+								} break;
+								}
+								if(WasDown != IsDown){
+									switch(VKCode){
+										case VK_ESCAPE:{
+											GlobalRunning = 0;
+										} break;
+										case VK_F4:{
+											if(AltKeyWasDown){
+												GlobalRunning = 0;
+											}
+										} break;
+										default:{
+										} break;
+									}
+								}
+							} break;
+							default:{
+								TranslateMessage(&Message);
+								DispatchMessageA(&Message);
+							} break;
+						}
 					}
-					UpdateAndRender(&Memory, &GlobalInput, &Buffer);
+					UpdateAndRender(&Memory, Input, &Buffer);
 					//
 					window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
 					win32_UpdateWindow(
