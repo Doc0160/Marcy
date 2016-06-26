@@ -10,19 +10,19 @@
 */
 #if MARCY_SLOW
 #define Assert(x) do { if (!(x)) { *(int *)0=0; } } while(0)
+/*#define Assert(x) \
+	do { if (!(x)) { __debugbreak(); } } while(0)*/
 #else
 #define Assert(x)
 #endif
-/*#define Assert(x) \
-	do { if (!(x)) { __debugbreak(); } } while(0)*/
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 #define MIN(x, y) ((x) <= (y) ? (x) : (y))
 #define MAX(x, y) ((x) >= (y) ? (x) : (y))
 // TODO(doc): 64 bits ???
-#define Kilobytes(value) ((value)*1024)
-#define Megabytes(value) (Kilobytes(value)*1024)
-#define Gigabytes(value) (Megabytes(value)*1024)
-#define Terabytes(value) (Gigabytes(value)*1024)
+#define Kilobytes(value) ((value)*1024LL)
+#define Megabytes(value) (Kilobytes(value)*1024LL)
+#define Gigabytes(value) (Megabytes(value)*1024LL)
+#define Terabytes(value) (Gigabytes(value)*1024LL)
 
 // NOTE(doc): may cause platform inefficiency
 struct offscreen_buffer{
@@ -57,6 +57,9 @@ struct memory{
 	uint64 TransientStorageSize;
 	void *TransientStorage; // NOTE(doc): REQUIRED to be cleared to 0
 };
+// timing ?, keyboard/mouse input, bitmap buffer to use
+internal void 
+UpdateAndRender(memory *Memory, input *Input, offscreen_buffer *Screen);
 //
 //
 //
@@ -65,13 +68,5 @@ struct state{
 	int GreenOffset;
 	int RedOffset;
 };
-//
-struct clocks{
-	// TODO
-	real32 SecondsElapsed;
-};
-// timing ?, keyboard/mouse input, bitmap buffer to use
-void UpdateAndRender(memory *Memory, input *Input, offscreen_buffer *Screen);
-
 #define PLATFORM_H
 #endif

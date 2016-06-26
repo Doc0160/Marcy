@@ -1,6 +1,9 @@
 #include "platform.h"
 #include "win32_platform.h"
 #include "central_piece.cpp"
+/*
+	NOT FINAL PLATFORM LAYER
+*/
 //
 void Debugf(char *format, ...){
 	char temp[1024];
@@ -51,7 +54,8 @@ win32_ResizeDIBSelection(
 	Backbuffer->Info.bmiHeader.biCompression = BI_RGB;
 	//
 	int BitmapMemorySize = (Backbuffer->Width*Backbuffer->Height)*4;
-	Backbuffer->Memory = VirtualAlloc(0,BitmapMemorySize,MEM_RESERVE|MEM_COMMIT,PAGE_READWRITE);
+	Backbuffer->Memory = VirtualAlloc(0, BitmapMemorySize, 
+		MEM_RESERVE|MEM_COMMIT,PAGE_READWRITE);
 	Backbuffer->Pitch = Backbuffer->Width*4;
 	DINFO("Backbuffer allocated");
 	// TODO(doc): maybe init to black
@@ -147,7 +151,8 @@ WindowProc(
 			EndPaint(wnd, &Paint);
 		} break;
 		default:{
-			// NOTE(doc): let window do his things 'cause some events need specific return values
+			// NOTE(doc): let window do his things 
+				//'cause some events need specific return values
 			Result=DefWindowProcA(wnd,Msg,WParam,LParam);
 		} break;
 	}
@@ -184,15 +189,16 @@ WinMain(
 			HDC DeviceContext = GetDC(WindowHandle);
 			//
 #if MARCY_DEBUG
-			LPVOID BaseAddress = (LPVOID)Terabytes((uint64)2);
+			LPVOID BaseAddress = (LPVOID)Terabytes(2);
 #else
 			LPVOID BaseAddress = 0;
 #endif
 			memory Memory = {}; 
 			Memory.PermanentStorageSize = Megabytes(64);
-			Memory.TransientStorageSize = Gigabytes((uint64)4);
+			Memory.TransientStorageSize = Gigabytes(4);
 			//
-			uint64 TotalSize = Memory.PermanentStorageSize + Memory.TransientStorageSize;
+			uint64 TotalSize = Memory.PermanentStorageSize 
+				+ Memory.TransientStorageSize;
 			Memory.PermanentStorage = VirtualAlloc(BaseAddress, 
 				TotalSize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE); 
 			Memory.TransientStorage = ((uint8 *)Memory.PermanentStorage 

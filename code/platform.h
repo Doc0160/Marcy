@@ -4,13 +4,6 @@
 #define global static
 #define persist static
 
-#define DINFO(msg) \
-	OutputDebugStringA("[ ] "msg"\n");
-#define DFAIL(msg) \
-	OutputDebugStringA("[-] "msg"\n");
-#define DSUCCESS(msg) \
-	OutputDebugStringA("[+] "msg"\n");
-
 #include <stdint.h>
 //
 typedef int8_t int8;

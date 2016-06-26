@@ -1,5 +1,12 @@
 #if !defined(WIN32_PLATFORM_H)
 //
+#define DINFO(msg) \
+	OutputDebugStringA("[ ] "msg"\n");
+#define DFAIL(msg) \
+	OutputDebugStringA("[-] "msg"\n");
+#define DSUCCESS(msg) \
+	OutputDebugStringA("[+] "msg"\n");
+//
 #include <windows.h>
 //
 #undef OutputDebugString
