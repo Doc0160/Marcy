@@ -110,6 +110,16 @@ WindowProc(
 					GlobalInput.Down.HalfTransitionCount=1;
 					GlobalInput.Down.EndedDown=IsDown;
 				} break;
+				case VK_RETURN:
+				case 'E':{
+					GlobalInput.Enter.HalfTransitionCount=1;
+					GlobalInput.Enter.EndedDown=IsDown;
+				} break;
+				case VK_BACK:
+				case 'A':{
+					GlobalInput.Back.HalfTransitionCount=1;
+					GlobalInput.Back.EndedDown=IsDown;
+				} break;
 				default:{
 				} break;
 			}
@@ -173,52 +183,76 @@ WinMain(
 			GlobalRunning=1;
 			HDC DeviceContext = GetDC(WindowHandle);
 			//
+#if MARCY_DEBUG
+			LPVOID BaseAddress = (LPVOID)Terabytes((uint64)2);
+#else
+			LPVOID BaseAddress = 0;
+#endif
 			memory Memory = {}; 
 			Memory.PermanentStorageSize = Megabytes(64);
-			Memory.PermanentStorage = VirtualAlloc(0, Memory.PermanentStorageSize, 
-				MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+			Memory.TransientStorageSize = Gigabytes((uint64)4);
 			//
-			offscreen_buffer Buffer = {};
-			Buffer.Memory = GlobalBackbuffer.Memory;
-			Buffer.Width = GlobalBackbuffer.Width;
-			Buffer.Height = GlobalBackbuffer.Height;
-			Buffer.Pitch = GlobalBackbuffer.Pitch;
+			uint64 TotalSize = Memory.PermanentStorageSize + Memory.TransientStorageSize;
+			Memory.PermanentStorage = VirtualAlloc(BaseAddress, 
+				TotalSize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE); 
+			Memory.TransientStorage = ((uint8 *)Memory.PermanentStorage 
+				+ Memory.PermanentStorageSize);
 			//
-			LARGE_INTEGER LastCounter;
-			QueryPerformanceCounter(&LastCounter);
-			int64 LastCycleCount = __rdtsc();
-			//
-			while(GlobalRunning){
-				// windows messages
-				MSG Message;
-				while(PeekMessageA(&Message,0,0,0,PM_REMOVE)){
-					TranslateMessage(&Message);
-					DispatchMessageA(&Message);
+			if(Memory.PermanentStorage && Memory.TransientStorage){
+				offscreen_buffer Buffer = {};
+				Buffer.Memory = GlobalBackbuffer.Memory;
+				Buffer.Width = GlobalBackbuffer.Width;
+				Buffer.Height = GlobalBackbuffer.Height;
+				Buffer.Pitch = GlobalBackbuffer.Pitch;
+				//
+				LARGE_INTEGER LastCounter;
+				QueryPerformanceCounter(&LastCounter);
+				int64 LastCycleCount = __rdtsc();
+				//
+				while(GlobalRunning){
+					// windows messages
+					MSG Message;
+					while(PeekMessageA(&Message,0,0,0,PM_REMOVE)){
+						TranslateMessage(&Message);
+						DispatchMessageA(&Message);
+					}
+					UpdateAndRender(&Memory, &GlobalInput, &Buffer);
+					//
+					window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
+					win32_UpdateWindow(
+						DeviceContext, &GlobalBackbuffer, 
+						Dimension.Width, Dimension.Height
+					);
+					//
+					int64 EndCycleCount = __rdtsc();
+					LARGE_INTEGER EndCounter;
+					QueryPerformanceCounter(&EndCounter);
+					//
+#if MARCY_DEBUG
+					uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
+					int64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
+					int32 MSPerFrame = (1000 * CounterElapsed) / PerfCountFrequency;
+					int32 FPS = PerfCountFrequency / CounterElapsed;
+					int32 MCPF = CyclesElapsed / (1000 * 1000);
+					Debugf("%dms/f, %df/s, %dMc/f\n", MSPerFrame, FPS, MCPF);
+#endif
+					//
+					LastCounter = EndCounter;
+					LastCycleCount = EndCycleCount;
 				}
-				UpdateAndRender(&Memory, &GlobalInput, &Buffer);
-				//
-				window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
-				win32_UpdateWindow(
-					DeviceContext, &GlobalBackbuffer, 
-					Dimension.Width, Dimension.Height
-				);
-				//
-				int64 EndCycleCount = __rdtsc();
-				LARGE_INTEGER EndCounter;
-				QueryPerformanceCounter(&EndCounter);
-				//
-				uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
-				int64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
-				int32 MSPerFrame = (1000 * CounterElapsed) / PerfCountFrequency;
-				int32 FPS = PerfCountFrequency / CounterElapsed;
-				int32 MCPF = CyclesElapsed / (1000 * 1000);
-				Debugf("%dms/f, %df/s, %dMc/f\n", MSPerFrame, FPS, MCPF);
-				//
-				LastCounter = EndCounter;
-				LastCycleCount = EndCycleCount;
+			}else{
+				// TODO
+				DFAIL("allocation");
 			}
 			// TODO(doc): maybe delete that, windows do it anyway ~~
 			ReleaseDC(WindowHandle, DeviceContext);
+		}else{
+			// TODO
+			DFAIL("window");
 		}
+	}else{
+		// TODO
+		DFAIL("register window class");
 	}
+	return(0);
 }

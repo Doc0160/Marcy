@@ -1,17 +1,28 @@
 #if !defined(CENTRAL_H)
-
-#define ArrayCount(Array) \
-	(sizeof(Array) / sizeof((Array)[0]))
-#define MIN(x, y) \
-	((x) <= (y) ? (x) : (y))
-#define MAX(x, y) \
-	((x) >= (y) ? (x) : (y))
-#define Kilobytes(value) \
-	((value)*1024)
-#define Megabytes(value) \
-	(Kilobytes(value)*1024)
-#define Gigabytes(value) \
-	(Megabytes(value)*1024)
+/*
+	NOTE(doc):
+		MARCY_SLOW:
+			0 - no slow code allowed
+			1 - slow code welcome
+		MARCY_DEBUG:
+			0 - dev code
+			1 - public release
+*/
+#if MARCY_SLOW
+#define Assert(x) do { if (!(x)) { *(int *)0=0; } } while(0)
+#else
+#define Assert(x)
+#endif
+/*#define Assert(x) \
+	do { if (!(x)) { __debugbreak(); } } while(0)*/
+#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
+#define MIN(x, y) ((x) <= (y) ? (x) : (y))
+#define MAX(x, y) ((x) >= (y) ? (x) : (y))
+// TODO(doc): 64 bits ???
+#define Kilobytes(value) ((value)*1024)
+#define Megabytes(value) (Kilobytes(value)*1024)
+#define Gigabytes(value) (Megabytes(value)*1024)
+#define Terabytes(value) (Gigabytes(value)*1024)
 
 // NOTE(doc): may cause platform inefficiency
 struct offscreen_buffer{
@@ -42,7 +53,9 @@ struct input{
 struct memory{
 	bool32 IsInitialized;
 	uint64 PermanentStorageSize;
-	void *PermanentStorage;
+	void *PermanentStorage; // NOTE(doc): REQUIRED to be cleared to 0
+	uint64 TransientStorageSize;
+	void *TransientStorage; // NOTE(doc): REQUIRED to be cleared to 0
 };
 //
 //
@@ -50,6 +63,12 @@ struct memory{
 struct state{
 	int BlueOffset;
 	int GreenOffset;
+	int RedOffset;
+};
+//
+struct clocks{
+	// TODO
+	real32 SecondsElapsed;
 };
 // timing ?, keyboard/mouse input, bitmap buffer to use
 void UpdateAndRender(memory *Memory, input *Input, offscreen_buffer *Screen);

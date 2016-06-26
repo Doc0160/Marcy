@@ -4,8 +4,6 @@
 #define global static
 #define persist static
 
-#define Assert(x) \
-	do { if (!(x)) { __debugbreak(); } } while(0)
 #define DINFO(msg) \
 	OutputDebugStringA("[ ] "msg"\n");
 #define DFAIL(msg) \
