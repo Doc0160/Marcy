@@ -191,6 +191,7 @@ WinMain(
 			//
 			LARGE_INTEGER LastCounter;
 			QueryPerformanceCounter(&LastCounter);
+			int64 LastCycleCount = __rdtsc();
 			//
 			while(global_running){
 				// windows messages
@@ -204,15 +205,19 @@ WinMain(
 				window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
 				win32_UpdateWindow(DeviceContext, &GlobalBackbuffer, Dimension.Width, Dimension.Height);
 				//
+				int64 EndCycleCount = __rdtsc();
 				LARGE_INTEGER EndCounter;
 				QueryPerformanceCounter(&EndCounter);
 				//
-				int64 CounterElapsed = EndCounter.QuadPart-LastCounter.QuadPart;
+				int64 CyclesElapsed = EndCycleCount - LastCycleCount;
+				int64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
 				int32 MSPerFrame = (int32)((1000 * CounterElapsed) / PerfCountFrequency);
-				int32 FPS = PerfCountFrequency / CounterElapsed;
-				Debugf("%dmspf / %dfps\n", MSPerFrame, FPS);
+				int32 FPS = (int32)(PerfCountFrequency / CounterElapsed);
+				int32 MCPF = (int32)(CyclesElapsed / (1000 * 1000));
+				Debugf("%dms/f, %df/s, %dMc/f\n", MSPerFrame, FPS, MCPF);
 				//
-				LastCounter=EndCounter;
+				LastCounter = EndCounter;
+				LastCycleCount = EndCycleCount;
 			}
 			// TODO(doc): maybe delete that, windows do it anyway ~~
 			ReleaseDC(WindowHandle, DeviceContext);
