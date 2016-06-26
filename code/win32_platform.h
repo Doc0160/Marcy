@@ -18,6 +18,7 @@
 #undef WNDCLASS
 #undef MessageBox
 #undef LoadLibrary
+#undef CreateFile
 //
 struct window_dimension{
 	int Width;

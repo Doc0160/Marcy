@@ -20,6 +20,14 @@ UpdateAndRender(memory *Memory, input *Input, offscreen_buffer *Screen){
 	Assert(sizeof(state) <= Memory->PermanentStorageSize);
 	state *State = (state *)Memory->PermanentStorage;
 	if(!Memory->IsInitialized){
+		char *Filename = __FILE__;
+		DEBUG_read_file_result File = DEBUGPlatformReadEntireFile(Filename);
+		if(File.Contents){
+			DEBUGPlatformWriteEntireFile("D:\\_C\\Marcy\\test.out", 
+				File.ContentsSize, File.Contents);
+			DEBUGPlatformFreeFileMemory(File.Contents);
+		}
+		//
 		//TODO(doc): may be more appropriate to do in the platform layer
 		Memory->IsInitialized=1;
 	}
