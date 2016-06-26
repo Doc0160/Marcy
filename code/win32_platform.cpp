@@ -142,6 +142,8 @@ win32_MainWindowCallback(
 ){
 	LRESULT Result = 0;
 	switch(Msg){
+		case WM_ACTIVATEAPP:{
+		} break;
 		case WM_CLOSE:{
 			GlobalRunning = 0;
 		} break;
@@ -154,8 +156,9 @@ win32_MainWindowCallback(
 			EndPaint(wnd, &Paint);
 		} break;
 		default:{
-			// NOTE(doc): let window do his things 
-				//'cause some events need specific return values
+			/* NOTE(doc): let window do his things 
+				'cause some events need specific return values
+			*/
 			Result=DefWindowProcA(wnd,Msg,WParam,LParam);
 		} break;
 	}
@@ -164,13 +167,14 @@ win32_MainWindowCallback(
 //
 internal void
 win32_ProcessKeyboardMessage(input_button *NewState, bool32 IsDown){
+	Assert(NewState->EndedDown != IsDown);
 	NewState->EndedDown = IsDown;
 	++NewState->HalfTransitionCount;
 }
 internal void
 win32_ProcessPendingMessages(input *Input){
 	MSG Message;
-	while(PeekMessageA(&Message,0,0,0,PM_REMOVE)){
+	while(PeekMessageA(&Message, 0, 0, 0, PM_REMOVE)){
 		switch(Message.message){
 			case WM_QUIT:{
 				GlobalRunning = 0;
@@ -182,7 +186,6 @@ win32_ProcessPendingMessages(input *Input){
 				uint32 VKCode = (uint32)Message.wParam;
 				bool32 WasDown = ((Message.lParam & (1 << 30)) != 0);
 				bool32 IsDown = ((Message.lParam & (1 << 31)) == 0);
-				bool32 AltKeyWasDown = (Message.lParam & (1 << 29));
 				if(WasDown != IsDown){
 					switch(VKCode){
 						case VK_LEFT:
@@ -202,6 +205,7 @@ win32_ProcessPendingMessages(input *Input){
 							win32_ProcessKeyboardMessage(&Input->Down, IsDown);
 						} break;
 						case VK_RETURN:
+						case VK_SPACE:
 						case 'E':{
 							win32_ProcessKeyboardMessage(&Input->Enter, IsDown);
 						} break;
@@ -213,6 +217,7 @@ win32_ProcessPendingMessages(input *Input){
 							GlobalRunning = 0;
 						} break;
 						case VK_F4:{
+							bool32 AltKeyWasDown = (Message.lParam & (1 << 29));
 							if(AltKeyWasDown){
 								GlobalRunning = 0;
 							}
@@ -296,15 +301,18 @@ WinMain(
 					// TODO(doc): 
 					// input ZeroInput = {};
 					// *Input = ZeroInput;
+					for(int ButtonIndex = 0; 
+						ButtonIndex < ArrayCount(Input->Buttons);
+						++ButtonIndex){
+						Input->Buttons[ButtonIndex].HalfTransitionCount=0;
+					}
 					//
 					win32_ProcessPendingMessages(Input);
 					UpdateAndRender(&Memory, Input, &Buffer);
 					//
 					window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
-					win32_UpdateWindow(
-						DeviceContext, &GlobalBackbuffer, 
-						Dimension.Width, Dimension.Height
-					);
+					win32_UpdateWindow(DeviceContext, &GlobalBackbuffer, 
+										Dimension.Width, Dimension.Height);
 					//
 					int64 EndCycleCount = __rdtsc();
 					LARGE_INTEGER EndCounter;
@@ -313,8 +321,7 @@ WinMain(
 #if MARCY_DEBUG
 					uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
 					int64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
-					int32 MSPerFrame = 
-						(int32)((1000 * CounterElapsed) / PerfCountFrequency);
+					int32 MSPerFrame = (int32)((1000 * CounterElapsed) / PerfCountFrequency);
 					int32 FPS = (int32)(PerfCountFrequency / CounterElapsed);
 					int32 MCPF = (int32)(CyclesElapsed / (1000 * 1000));
 					Debugf("%dms/f, %df/s, %dMc/f\n", MSPerFrame, FPS, MCPF);

@@ -79,6 +79,7 @@ struct input{
 	union{
 		input_button Buttons[6];
 		struct{
+			//
 			input_button Up;
 			input_button Down;
 			input_button Left;

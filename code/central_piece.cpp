@@ -20,6 +20,8 @@ UpdateAndRender(memory *Memory, input *Input, offscreen_buffer *Screen){
 	Assert(sizeof(state) <= Memory->PermanentStorageSize);
 	state *State = (state *)Memory->PermanentStorage;
 	if(!Memory->IsInitialized){
+		Assert((&Input->Back - &Input->Buttons[0]) == 
+			(ArrayCount(Input->Buttons) - 1));
 		char *Filename = __FILE__;
 		DEBUG_read_file_result File = DEBUGPlatformReadEntireFile(Filename);
 		if(File.Contents){
