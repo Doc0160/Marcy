@@ -1,35 +1,7 @@
 #include "platform.h"
-#include <stdint.h>
-//
-typedef int8_t int8;
-typedef int16_t int16;
-typedef int32_t int32;
-typedef int64_t int64;
-//
-typedef int32 bool32;
-//
-typedef uint8_t uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
-//
-typedef float real32;
-typedef double real64;
-
+#include "win32_platform.h"
 #include "central_piece.cpp"
-
-#define DINFO(msg) OutputDebugStringA("[ ] "msg"\n");
-#define DFAIL(msg) OutputDebugStringA("[-] "msg"\n");
-#define DSUCCESS(msg) OutputDebugStringA("[+] "msg"\n");
-
-#define internal static
-#define global static
-
-#include <windows.h>
-
-#define Assert(x) \
-	do { if (!(x)) { __debugbreak(); } } while(0)
-
+//
 void Debugf(char *format, ...){
 	char temp[1024];
 	va_list arg_list;
@@ -38,32 +10,10 @@ void Debugf(char *format, ...){
 	va_end(arg_list);
 	OutputDebugStringA(temp);
 }
-
-#undef OutputDebugString
-#undef RegisterClass
-#undef DefWindowProc
-#undef CreateWindowEx
-#undef GetMessage
-#undef DispatchMessage
-#undef WNDCLASS
-#undef MessageBox
-#undef LoadLibrary
-
-struct window_dimension{
-	int Width;
-	int Height;
-};
-struct win32_offscreen_buffer{
-	// NOTE(doc): pixels are alwasy 32-bits wide, memory order BB GG RR XX
-	BITMAPINFO Info;
-	void       *Memory;
-	int        Width;
-	int        Height;
-	int        Pitch;
-};
 //
-global bool32 global_running = 0;
+global bool32 GlobalRunning = 0;
 global win32_offscreen_buffer GlobalBackbuffer = {};
+global input GlobalInput = {};
 //
 internal window_dimension
 win32_GetWindowDimension(
@@ -129,8 +79,55 @@ WindowProc(
 	LRESULT Result = 0;
 	switch(Msg){
 		case WM_CLOSE:{
-			global_running=0;
+			GlobalRunning=0;
 		}break;
+		case WM_SYSKEYDOWN:
+        case WM_SYSKEYUP:
+		case WM_KEYUP:
+		case WM_KEYDOWN:{
+			uint32 VKCode = WParam;
+            bool32 WasDown = ((LParam & (1 << 30)) != 0);
+            bool32 IsDown = ((LParam & (1 << 31)) == 0);
+			bool32 AltKeyWasDown = (LParam & (1 << 29));
+			switch(VKCode){
+				case VK_LEFT:
+				case 'Q':{
+					GlobalInput.Left.HalfTransitionCount=1;
+					GlobalInput.Left.EndedDown=IsDown;
+				} break;
+				case VK_RIGHT:
+				case 'D':{
+					GlobalInput.Right.HalfTransitionCount=1;
+					GlobalInput.Right.EndedDown=IsDown;
+				} break;
+				case VK_UP:
+				case 'Z':{
+					GlobalInput.Up.HalfTransitionCount=1;
+					GlobalInput.Up.EndedDown=IsDown;
+				} break;
+				case VK_DOWN:
+				case 'S':{
+					GlobalInput.Down.HalfTransitionCount=1;
+					GlobalInput.Down.EndedDown=IsDown;
+				} break;
+				default:{
+				} break;
+			}
+			if(WasDown != IsDown){
+				switch(VKCode){
+					/*case VK_ESCAPE:{
+						GlobalRunning=false;
+					} break;*/
+					case VK_F4:{
+						if(AltKeyWasDown){
+							GlobalRunning=false;
+						}
+					} break;
+					default:{
+					} break;
+				}
+			}
+		} break;
 		case WM_PAINT:{
 			PAINTSTRUCT Paint;
 			HDC DeviceContext = BeginPaint(wnd, &Paint);
@@ -167,20 +164,13 @@ WinMain(
 	//
 	if(RegisterClassA(&WindowClass)){
 		HWND WindowHandle = CreateWindowExA(
-			0,
-			"MARCY_WC",
-			"Marcy",
+			0, "MARCY_WC", "Marcy",
 			WS_OVERLAPPEDWINDOW|WS_VISIBLE,
-			CW_USEDEFAULT,
-			CW_USEDEFAULT,
-			CW_USEDEFAULT,
-			CW_USEDEFAULT,
-			0,
-			0,
-			Instance,
-			0);
+			CW_USEDEFAULT, CW_USEDEFAULT,
+			CW_USEDEFAULT, CW_USEDEFAULT,
+			0, 0, Instance, 0);
 		if(WindowHandle){
-			global_running=1;
+			GlobalRunning=1;
 			HDC DeviceContext = GetDC(WindowHandle);
 			//
 			offscreen_buffer Buffer = {};
@@ -193,14 +183,14 @@ WinMain(
 			QueryPerformanceCounter(&LastCounter);
 			int64 LastCycleCount = __rdtsc();
 			//
-			while(global_running){
+			while(GlobalRunning){
 				// windows messages
 				MSG Message;
 				while(PeekMessageA(&Message,0,0,0,PM_REMOVE)){
 					TranslateMessage(&Message);
 					DispatchMessageA(&Message);
 				}
-				UpdateAndRender(&Buffer);
+				UpdateAndRender(&GlobalInput, &Buffer);
 				//
 				window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
 				win32_UpdateWindow(DeviceContext, &GlobalBackbuffer, Dimension.Width, Dimension.Height);
@@ -209,11 +199,11 @@ WinMain(
 				LARGE_INTEGER EndCounter;
 				QueryPerformanceCounter(&EndCounter);
 				//
-				int64 CyclesElapsed = EndCycleCount - LastCycleCount;
+				uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
 				int64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
-				int32 MSPerFrame = (int32)((1000 * CounterElapsed) / PerfCountFrequency);
-				int32 FPS = (int32)(PerfCountFrequency / CounterElapsed);
-				int32 MCPF = (int32)(CyclesElapsed / (1000 * 1000));
+				int32 MSPerFrame = (1000 * CounterElapsed) / PerfCountFrequency;
+				int32 FPS = PerfCountFrequency / CounterElapsed;
+				int32 MCPF = CyclesElapsed / (1000 * 1000);
 				Debugf("%dms/f, %df/s, %dMc/f\n", MSPerFrame, FPS, MCPF);
 				//
 				LastCounter = EndCounter;

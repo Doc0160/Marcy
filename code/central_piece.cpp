@@ -1,20 +1,6 @@
 #include "central_piece.h"
 
-typedef int8_t int8;
-typedef int16_t int16;
-typedef int32_t int32;
-typedef int64_t int64;
-typedef int32 bool32;
-
-typedef uint8_t uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
-
-typedef float real32;
-typedef double real64;
-
-void
+internal void
 RenderWeirdGradient(offscreen_buffer *Backbuffer, int BlueOffset, int GreenOffset){
     uint8 *Row = (uint8 *)Backbuffer->Memory;
     for(int Y = 0;Y<Backbuffer->Height;++Y){
@@ -28,9 +14,20 @@ RenderWeirdGradient(offscreen_buffer *Backbuffer, int BlueOffset, int GreenOffse
     }
 }
 
-void UpdateAndRender(offscreen_buffer *screen){
-	static int x = 0;
-	static int y = 0;
-	RenderWeirdGradient(screen, x++, y++);
+internal void
+UpdateAndRender(input *Input, offscreen_buffer *Screen){
+	persist int x = 0;
+	persist int y = 0;
+	if(Input->Up.EndedDown){
+		y++;
+	}else if(Input->Down.EndedDown){
+		y--;
+	}
+	if(Input->Left.EndedDown){
+		x++;
+	}else if(Input->Right.EndedDown){
+		x--;
+	}
+	RenderWeirdGradient(Screen, x, y);
 }
 
