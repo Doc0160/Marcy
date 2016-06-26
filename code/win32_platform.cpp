@@ -134,7 +134,7 @@ win32_UpdateWindow(
 		DIB_RGB_COLORS, SRCCOPY);
 }
 internal LRESULT CALLBACK
-WindowProc(
+win32_MainWindowCallback(
 	HWND   wnd,
 	UINT   Msg,
 	WPARAM WParam,
@@ -167,6 +167,68 @@ win32_ProcessKeyboardMessage(input_button *NewState, bool32 IsDown){
 	NewState->EndedDown = IsDown;
 	++NewState->HalfTransitionCount;
 }
+internal void
+win32_ProcessPendingMessages(input *Input){
+	MSG Message;
+	while(PeekMessageA(&Message,0,0,0,PM_REMOVE)){
+		switch(Message.message){
+			case WM_QUIT:{
+				GlobalRunning = 0;
+			} break;
+			case WM_SYSKEYDOWN:
+			case WM_SYSKEYUP:
+			case WM_KEYUP:
+			case WM_KEYDOWN:{
+				uint32 VKCode = (uint32)Message.wParam;
+				bool32 WasDown = ((Message.lParam & (1 << 30)) != 0);
+				bool32 IsDown = ((Message.lParam & (1 << 31)) == 0);
+				bool32 AltKeyWasDown = (Message.lParam & (1 << 29));
+				if(WasDown != IsDown){
+					switch(VKCode){
+						case VK_LEFT:
+						case 'Q':{
+							win32_ProcessKeyboardMessage(&Input->Left, IsDown);
+						} break;
+						case VK_RIGHT:
+						case 'D':{
+							win32_ProcessKeyboardMessage(&Input->Right, IsDown);
+						} break;
+						case VK_UP:
+						case 'Z':{
+							win32_ProcessKeyboardMessage(&Input->Up, IsDown);
+						} break;
+						case VK_DOWN:
+						case 'S':{
+							win32_ProcessKeyboardMessage(&Input->Down, IsDown);
+						} break;
+						case VK_RETURN:
+						case 'E':{
+							win32_ProcessKeyboardMessage(&Input->Enter, IsDown);
+						} break;
+						case VK_BACK:
+						case 'A':{
+							win32_ProcessKeyboardMessage(&Input->Back, IsDown);
+						} break;
+						case VK_ESCAPE:{
+							GlobalRunning = 0;
+						} break;
+						case VK_F4:{
+							if(AltKeyWasDown){
+								GlobalRunning = 0;
+							}
+						} break;
+						default:{
+						} break;
+					}
+				}
+			} break;
+			default:{
+				TranslateMessage(&Message);
+				DispatchMessageA(&Message);
+			} break;
+		}
+	}
+}
 //
 int CALLBACK 
 WinMain(
@@ -182,7 +244,7 @@ WinMain(
 	WNDCLASSA WindowClass = {};
 	win32_ResizeDIBSelection(&GlobalBackbuffer, 1280/2, 720/2);
 	WindowClass.style       = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
-	WindowClass.lpfnWndProc = WindowProc;
+	WindowClass.lpfnWndProc = win32_MainWindowCallback;
 	WindowClass.hInstance   = Instance;
 	// WindowClass.hIcon         = ;
 	WindowClass.lpszClassName = "MARCY_WC";
@@ -230,73 +292,12 @@ WinMain(
 				//
 				while(GlobalRunning){
 					// windows messages
-					MSG Message;
 					//
+					// TODO(doc): 
 					// input ZeroInput = {};
 					// *Input = ZeroInput;
 					//
-					while(PeekMessageA(&Message,0,0,0,PM_REMOVE)){
-						switch(Message.message){
-							case WM_QUIT:{
-								GlobalRunning = 0;
-							} break;
-							case WM_SYSKEYDOWN:
-							case WM_SYSKEYUP:
-							case WM_KEYUP:
-							case WM_KEYDOWN:{
-								uint32 VKCode = (uint32)Message.wParam;
-								bool32 WasDown = ((Message.lParam & (1 << 30)) != 0);
-								bool32 IsDown = ((Message.lParam & (1 << 31)) == 0);
-								bool32 AltKeyWasDown = (Message.lParam & (1 << 29));
-								switch(VKCode){
-								case VK_LEFT:
-								case 'Q':{
-									win32_ProcessKeyboardMessage(&Input->Left, IsDown);
-								} break;
-								case VK_RIGHT:
-								case 'D':{
-									win32_ProcessKeyboardMessage(&Input->Right, IsDown);
-								} break;
-								case VK_UP:
-								case 'Z':{
-									win32_ProcessKeyboardMessage(&Input->Up, IsDown);
-								} break;
-								case VK_DOWN:
-								case 'S':{
-									win32_ProcessKeyboardMessage(&Input->Down, IsDown);
-								} break;
-								case VK_RETURN:
-								case 'E':{
-									win32_ProcessKeyboardMessage(&Input->Enter, IsDown);
-								} break;
-								case VK_BACK:
-								case 'A':{
-									win32_ProcessKeyboardMessage(&Input->Back, IsDown);
-								} break;
-								default:{
-								} break;
-								}
-								if(WasDown != IsDown){
-									switch(VKCode){
-										case VK_ESCAPE:{
-											GlobalRunning = 0;
-										} break;
-										case VK_F4:{
-											if(AltKeyWasDown){
-												GlobalRunning = 0;
-											}
-										} break;
-										default:{
-										} break;
-									}
-								}
-							} break;
-							default:{
-								TranslateMessage(&Message);
-								DispatchMessageA(&Message);
-							} break;
-						}
-					}
+					win32_ProcessPendingMessages(Input);
 					UpdateAndRender(&Memory, Input, &Buffer);
 					//
 					window_dimension Dimension = win32_GetWindowDimension(WindowHandle);

@@ -31,9 +31,8 @@ typedef double real64;
 			1 - public release
 */
 #if MARCY_SLOW
-#define Assert(x) do { if (!(x)) { *(int *)0=0; } } while(0)
-/*#define Assert(x) \
-	do { if (!(x)) { __debugbreak(); } } while(0)*/
+#define Assert(x) if(!(x)){ *(int *)0=0; }
+// #define Assert(x) do { if (!(x)) { __debugbreak(); } } while(0)
 #else
 #define Assert(x)
 #endif
