@@ -6,9 +6,9 @@ RenderWeirdGradient(offscreen_buffer *Backbuffer, int BlueOffset, int GreenOffse
     for(int Y = 0;Y<Backbuffer->Height;++Y){
         uint32 *Pixel = (uint32*)Row;
         for(int X = 0;X<Backbuffer->Width;++X){
-            uint8 Blue  = (X + BlueOffset);
-            uint8 Green = (Y + GreenOffset);
-            uint8 Red = (RedOffset);
+            uint8 Blue  = (uint8)(X + BlueOffset);
+            uint8 Green = (uint8)(Y + GreenOffset);
+            uint8 Red = (uint8)(RedOffset);
             *Pixel++    = ((Red << 16) |(Green << 8) | Blue);
         }
         Row += Backbuffer->Pitch;
@@ -23,7 +23,7 @@ UpdateAndRender(memory *Memory, input *Input, offscreen_buffer *Screen){
 		char *Filename = __FILE__;
 		DEBUG_read_file_result File = DEBUGPlatformReadEntireFile(Filename);
 		if(File.Contents){
-			DEBUGPlatformWriteEntireFile("D:\\_C\\Marcy\\test.out", 
+			DEBUGPlatformWriteEntireFile("test.out", 
 				File.ContentsSize, File.Contents);
 			DEBUGPlatformFreeFileMemory(File.Contents);
 		}

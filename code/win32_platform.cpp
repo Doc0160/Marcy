@@ -150,7 +150,7 @@ WindowProc(
         case WM_SYSKEYUP:
 		case WM_KEYUP:
 		case WM_KEYDOWN:{
-			uint32 VKCode = WParam;
+			uint32 VKCode = (uint32)WParam;
             bool32 WasDown = ((LParam & (1 << 30)) != 0);
             bool32 IsDown = ((LParam & (1 << 31)) == 0);
 			bool32 AltKeyWasDown = (LParam & (1 << 29));
@@ -219,7 +219,7 @@ WindowProc(
 	}
 	return(Result);
 }
-internal int CALLBACK 
+int CALLBACK 
 WinMain(
 	HINSTANCE Instance,
 	HINSTANCE PrevInstance,
@@ -256,12 +256,12 @@ WinMain(
 #endif
 			memory Memory = {}; 
 			Memory.PermanentStorageSize = Megabytes(64);
-			Memory.TransientStorageSize = Gigabytes(4);
+			Memory.TransientStorageSize = Gigabytes(1);
 			//
 			uint64 TotalSize = Memory.PermanentStorageSize 
 				+ Memory.TransientStorageSize;
 			Memory.PermanentStorage = VirtualAlloc(BaseAddress, 
-				TotalSize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE); 
+				(size_t)TotalSize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE); 
 			Memory.TransientStorage = ((uint8 *)Memory.PermanentStorage 
 				+ Memory.PermanentStorageSize);
 			//
@@ -298,9 +298,10 @@ WinMain(
 #if MARCY_DEBUG
 					uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
 					int64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
-					int32 MSPerFrame = (1000 * CounterElapsed) / PerfCountFrequency;
-					int32 FPS = PerfCountFrequency / CounterElapsed;
-					int32 MCPF = CyclesElapsed / (1000 * 1000);
+					int32 MSPerFrame = 
+						(int32)((1000 * CounterElapsed) / PerfCountFrequency);
+					int32 FPS = (int32)(PerfCountFrequency / CounterElapsed);
+					int32 MCPF = (int32)(CyclesElapsed / (1000 * 1000));
 					Debugf("%dms/f, %df/s, %dMc/f\n", MSPerFrame, FPS, MCPF);
 #endif
 					//
