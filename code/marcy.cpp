@@ -1,4 +1,4 @@
-#include "central_piece.h"
+#include "marcy.h"
 
 internal void
 RenderWeirdGradient(offscreen_buffer *Backbuffer, int BlueOffset, int GreenOffset, int RedOffset){
@@ -15,19 +15,18 @@ RenderWeirdGradient(offscreen_buffer *Backbuffer, int BlueOffset, int GreenOffse
     }
 }
 
-internal void
-UpdateAndRender(memory *Memory, input *Input, offscreen_buffer *Screen){
+UPDATE_AND_RENDER(UpdateAndRender){
 	Assert(sizeof(state) <= Memory->PermanentStorageSize);
 	state *State = (state *)Memory->PermanentStorage;
 	if(!Memory->IsInitialized){
 		Assert((&Input->Back - &Input->Buttons[0]) == 
 			(ArrayCount(Input->Buttons) - 1));
 		char *Filename = __FILE__;
-		DEBUG_read_file_result File = DEBUGPlatformReadEntireFile(Filename);
+		DEBUG_read_file_result File = Memory->DEBUGPlatformReadEntireFile(Filename);
 		if(File.Contents){
-			DEBUGPlatformWriteEntireFile("test.out", 
+			Memory->DEBUGPlatformWriteEntireFile("test.out", 
 				File.ContentsSize, File.Contents);
-			DEBUGPlatformFreeFileMemory(File.Contents);
+			Memory->DEBUGPlatformFreeFileMemory(File.Contents);
 		}
 		//
 		//TODO(doc): may be more appropriate to do in the platform layer
@@ -51,3 +50,11 @@ UpdateAndRender(memory *Memory, input *Input, offscreen_buffer *Screen){
 	RenderWeirdGradient(Screen, State->GreenOffset, State->BlueOffset, State->RedOffset);
 }
 
+#if MARCY_WIN32
+#include <windows.h>
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, 
+	DWORD fdwReason,
+	LPVOID lpReserved){
+    return(TRUE);
+}
+#endif

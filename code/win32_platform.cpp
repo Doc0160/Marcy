@@ -1,25 +1,39 @@
-#include "platform.h"
+// #include "platform.h"
 #include "win32_platform.h"
-#include "central_piece.cpp"
+#include "marcy.h"
 /*
 	NOT FINAL PLATFORM LAYER
 */
-//
-void Debugf(char *format, ...){
-	char temp[1024];
-	va_list arg_list;
-	va_start(arg_list, format);
-	wvsprintfA(temp, format, arg_list);
-	va_end(arg_list);
-	OutputDebugStringA(temp);
-}
 //
 global bool32 GlobalRunning = 0;
 global win32_offscreen_buffer GlobalBackbuffer = {};
 global int64 GlobalPerfCountFrequency;
 //
-internal DEBUG_read_file_result
-DEBUGPlatformReadEntireFile(char *Filename){
+DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory){
+	if(Memory){
+		VirtualFree(Memory, 0, MEM_RELEASE);
+	}
+}
+DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile){
+	bool32 Result = 0;
+	HANDLE FileHandle = CreateFileA(Filename, GENERIC_WRITE,
+		0, 0, CREATE_ALWAYS, 0, 0);
+	if(FileHandle != INVALID_HANDLE_VALUE){
+		DWORD BytesWritten;
+		if(WriteFile(FileHandle, Memory, MemorySize, &BytesWritten, 0)
+			&& (MemorySize==BytesWritten)){
+			//NOTE(doc): success
+			Result = 1;
+		}else{
+			//TODO
+		}
+		CloseHandle(FileHandle);
+	}else{
+		//TODO
+	}
+	return(Result);
+}
+DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile){
 	DEBUG_read_file_result Result = {};
 	HANDLE FileHandle = CreateFileA(Filename, GENERIC_READ,
 		FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
@@ -51,30 +65,24 @@ DEBUGPlatformReadEntireFile(char *Filename){
 	}
 	return Result;
 }
-internal void
-DEBUGPlatformFreeFileMemory(void *Memory){
-	if(Memory){
-		VirtualFree(Memory, 0, MEM_RELEASE);
+struct win32_marcy_code{
+	HMODULE MarcyCodeDLL;
+	update_and_render *UpdateAndRender;
+	//
+	bool32 IsValid;
+};
+internal win32_marcy_code
+win32_LoadGameCode(void){
+	win32_marcy_code Result = {};
+	//
+	Result.MarcyCodeDLL = LoadLibraryA("marcy.dll");
+	if(Result.MarcyCodeDLL){
+		Result.UpdateAndRender = (update_and_render *)
+			GetProcAddress(Result.MarcyCodeDLL, "UpdateAndRender");
+		Result.IsValid = (Result.UpdateAndRender!=0);
 	}
-}
-//
-internal bool32
-DEBUGPlatformWriteEntireFile(char *Filename, uint32 MemorySize, void *Memory){
-	bool32 Result = 0;
-	HANDLE FileHandle = CreateFileA(Filename, GENERIC_WRITE,
-		0, 0, CREATE_ALWAYS, 0, 0);
-	if(FileHandle != INVALID_HANDLE_VALUE){
-		DWORD BytesWritten;
-		if(WriteFile(FileHandle, Memory, MemorySize, &BytesWritten, 0)
-			&& (MemorySize==BytesWritten)){
-			//NOTE(doc): success
-			Result = 1;
-		}else{
-			//TODO
-		}
-		CloseHandle(FileHandle);
-	}else{
-		//TODO
+	if(!Result.IsValid){
+		Result.UpdateAndRender = UpdateAndRenderStub;
 	}
 	return(Result);
 }
@@ -255,6 +263,7 @@ WinMain(
 	LPSTR     CmdLine,
 	int       CmdShow
 ){
+	win32_marcy_code MarcyCode = win32_LoadGameCode();
 	LARGE_INTEGER PerfCountFrequencyResult;
 	QueryPerformanceFrequency(&PerfCountFrequencyResult);
 	GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
@@ -297,6 +306,10 @@ WinMain(
 			Memory.PermanentStorageSize = Megabytes(64);
 			Memory.TransientStorageSize = Gigabytes(1);
 			//
+			Memory.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
+			Memory.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;
+			Memory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
+			//
 			uint64 TotalSize = Memory.PermanentStorageSize 
 				+ Memory.TransientStorageSize;
 			Memory.PermanentStorage = VirtualAlloc(BaseAddress, 
@@ -327,19 +340,25 @@ WinMain(
 					Buffer.Width = GlobalBackbuffer.Width;
 					Buffer.Height = GlobalBackbuffer.Height;
 					Buffer.Pitch = GlobalBackbuffer.Pitch;
-					UpdateAndRender(&Memory, Input, &Buffer);
+					MarcyCode.UpdateAndRender(&Memory, Input, &Buffer);
 					//
 					LARGE_INTEGER WorkCounter = win32_GetWallClock();
-					real32 WorkSecondsElapsed = win32_GetSecondsElapsed(LastCounter, WorkCounter);
+					real32 WorkSecondsElapsed = win32_GetSecondsElapsed(LastCounter, 
+						WorkCounter);
 					//
 					real32 SecondsElapsedForFrame = WorkSecondsElapsed;
 					if(SecondsElapsedForFrame < TargetSecondsPerFrame){
-						while(SecondsElapsedForFrame < TargetSecondsPerFrame){
-							if(SleepIsGranular){
-								DWORD SleepMS = (DWORD)(1000.0f * 
-									(TargetSecondsPerFrame - SecondsElapsedForFrame));
+						if(SleepIsGranular){
+							DWORD SleepMS = (DWORD)(1000.0f * 
+								(TargetSecondsPerFrame - SecondsElapsedForFrame)-1.5);
+							if(SleepMS > 0){
 								Sleep(SleepMS);
 							}
+						}
+						real32 TestSecondsElapsedForFrame = 
+								win32_GetSecondsElapsed(LastCounter, win32_GetWallClock());
+						Assert(TestSecondsElapsedForFrame <= TargetSecondsPerFrame);
+						while(SecondsElapsedForFrame < TargetSecondsPerFrame){
 							SecondsElapsedForFrame = 
 								win32_GetSecondsElapsed(LastCounter, win32_GetWallClock());
 						}
@@ -347,24 +366,25 @@ WinMain(
 						// TODO(doc): missed frame rate (to log)
 					}
 					//
+					LARGE_INTEGER EndCounter = win32_GetWallClock();
+					real64 MSPerFrame = (1000.0f *
+						win32_GetSecondsElapsed(LastCounter, EndCounter));
+					LastCounter = EndCounter;
+					//
 					window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
 					win32_UpdateWindow(DeviceContext, &GlobalBackbuffer, 
 										Dimension.Width, Dimension.Height);
 					//
-#if 0
-					int32 MSPerFrame = (int32)((1000.0f * (real32)CounterElapsed) / 
-						(real32)GlobalPerfCountFrequency);
-					int32 FPS = (int32)((real32)GlobalPerfCountFrequency / 
-						(real32)CounterElapsed);
-					int32 MCPF = (int32)((real32)CyclesElapsed / (1000.0f * 1000.0f));
-					Debugf("%dms/f, %df/s, %dMc/f\n", MSPerFrame, FPS, MCPF);
-#endif
-					LARGE_INTEGER EndCounter = win32_GetWallClock();
-					LastCounter = EndCounter;
-					//
 					int64 EndCycleCount = __rdtsc();
 					uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
 					LastCycleCount = EndCycleCount;
+					//
+					real64 FPS = 0.0f;
+					real64 MCPF = ((real64)CyclesElapsed / (1000.0f * 1000.0f));
+					char temp[1024];
+					_snprintf_s(temp, sizeof(temp),
+						"%.02f ms/f, %.02f f/s, %.02f  Mc/f\n", MSPerFrame, FPS, MCPF);
+					OutputDebugStringA(temp);
 				}
 			}else{
 				// TODO

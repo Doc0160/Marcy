@@ -8,6 +8,7 @@
 	OutputDebugStringA("[+] "msg"\n");
 //
 #include <windows.h>
+#include <stdio.h>
 //
 #undef OutputDebugString
 #undef RegisterClass
