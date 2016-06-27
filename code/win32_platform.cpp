@@ -16,6 +16,7 @@ void Debugf(char *format, ...){
 //
 global bool32 GlobalRunning = 0;
 global win32_offscreen_buffer GlobalBackbuffer = {};
+global int64 GlobalPerfCountFrequency;
 //
 internal DEBUG_read_file_result
 DEBUGPlatformReadEntireFile(char *Filename){
@@ -234,6 +235,18 @@ win32_ProcessPendingMessages(input *Input){
 		}
 	}
 }
+inline LARGE_INTEGER
+win32_GetWallClock(){
+	LARGE_INTEGER Result;
+	QueryPerformanceCounter(&Result);
+	return(Result);
+}
+inline real32
+win32_GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End){
+	real32 Result =
+		((real32)(End.QuadPart - Start.QuadPart) / (real32)GlobalPerfCountFrequency);
+	return(Result);
+}
 //
 int CALLBACK 
 WinMain(
@@ -244,7 +257,7 @@ WinMain(
 ){
 	LARGE_INTEGER PerfCountFrequencyResult;
 	QueryPerformanceFrequency(&PerfCountFrequencyResult);
-	int64 PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+	GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
 	//
 	WNDCLASSA WindowClass = {};
 	win32_ResizeDIBSelection(&GlobalBackbuffer, 1280/2, 720/2);
@@ -253,6 +266,11 @@ WinMain(
 	WindowClass.hInstance   = Instance;
 	// WindowClass.hIcon         = ;
 	WindowClass.lpszClassName = "MARCY_WC";
+	//
+	// TODO(doc): how to get that on windows
+	int MonitorRefreshHz = 60;
+	int UpdateHz = MonitorRefreshHz / 2;
+	real32 TargetSecondsPerFrame = 1.0f / (real32)UpdateHz;
 	//
 	if(RegisterClassA(&WindowClass)){
 		HWND WindowHandle = CreateWindowExA(
@@ -291,16 +309,12 @@ WinMain(
 				input InputData = {};
 				input *Input = &InputData;
 				//
-				LARGE_INTEGER LastCounter;
-				QueryPerformanceCounter(&LastCounter);
+				LARGE_INTEGER LastCounter = win32_GetWallClock();
 				int64 LastCycleCount = __rdtsc();
 				//
 				while(GlobalRunning){
 					// windows messages
 					//
-					// TODO(doc): 
-					// input ZeroInput = {};
-					// *Input = ZeroInput;
 					for(int ButtonIndex = 0; 
 						ButtonIndex < ArrayCount(Input->Buttons);
 						++ButtonIndex){
@@ -315,17 +329,25 @@ WinMain(
 										Dimension.Width, Dimension.Height);
 					//
 					int64 EndCycleCount = __rdtsc();
-					LARGE_INTEGER EndCounter;
-					QueryPerformanceCounter(&EndCounter);
-					//
-#if MARCY_DEBUG
 					uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
-					int64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
-					int32 MSPerFrame = (int32)((1000 * CounterElapsed) / PerfCountFrequency);
-					int32 FPS = (int32)(PerfCountFrequency / CounterElapsed);
-					int32 MCPF = (int32)(CyclesElapsed / (1000 * 1000));
+					//
+					LARGE_INTEGER WorkCounter = win32_GetWallClock();
+					real32 WorkSecondsElapsed = win32_GetSecondsElapsed(LastCounter, WorkCounter);
+					//
+					real32 SecondsElapsedForFrame = WorkSecondsElapsed;
+					while(SecondsElapsedForFrame < TargetSecondsPerFrame){
+						SecondsElapsedForFrame = win32_GetSecondsElapsed(LastCounter,
+							win32_GetWallClock());
+					}
+					//
+#if 0
+					int32 MSPerFrame = (int32)((1000.0f * (real32)CounterElapsed) 
+						/ (real32)GlobalPerfCountFrequency);
+					int32 FPS = (int32)((real32)GlobalPerfCountFrequency / (real32)CounterElapsed);
+					int32 MCPF = (int32)((real32)CyclesElapsed / (1000.0f * 1000.0f));
 					Debugf("%dms/f, %df/s, %dMc/f\n", MSPerFrame, FPS, MCPF);
 #endif
+					LARGE_INTEGER EndCounter = win32_GetWallClock();
 					//
 					LastCounter = EndCounter;
 					LastCycleCount = EndCycleCount;

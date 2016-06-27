@@ -75,6 +75,10 @@ struct input_button{
 	int HalfTransitionCount;
 	bool32 EndedDown;
 };
+struct mouse{
+	input_button Right;
+	input_button Left;
+};
 struct input{
 	union{
 		input_button Buttons[6];
