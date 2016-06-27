@@ -259,6 +259,11 @@ WinMain(
 	QueryPerformanceFrequency(&PerfCountFrequencyResult);
 	GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
 	//
+	// NOTE(doc): set windows scheduler to wake up everry 1ms! (set scheduler granularyty)
+		// so sleep is more precision
+	UINT DesiredSchedulerMS = 1;
+	bool32 SleepIsGranular = (timeBeginPeriod(DesiredSchedulerMS) == TIMERR_NOERROR);
+	//
 	WNDCLASSA WindowClass = {};
 	win32_ResizeDIBSelection(&GlobalBackbuffer, 1280/2, 720/2);
 	WindowClass.style       = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
@@ -300,12 +305,6 @@ WinMain(
 				+ Memory.PermanentStorageSize);
 			//
 			if(Memory.PermanentStorage && Memory.TransientStorage){
-				offscreen_buffer Buffer = {};
-				Buffer.Memory = GlobalBackbuffer.Memory;
-				Buffer.Width = GlobalBackbuffer.Width;
-				Buffer.Height = GlobalBackbuffer.Height;
-				Buffer.Pitch = GlobalBackbuffer.Pitch;
-				//
 				input InputData = {};
 				input *Input = &InputData;
 				//
@@ -322,34 +321,49 @@ WinMain(
 					}
 					//
 					win32_ProcessPendingMessages(Input);
+					//
+					offscreen_buffer Buffer = {};
+					Buffer.Memory = GlobalBackbuffer.Memory;
+					Buffer.Width = GlobalBackbuffer.Width;
+					Buffer.Height = GlobalBackbuffer.Height;
+					Buffer.Pitch = GlobalBackbuffer.Pitch;
 					UpdateAndRender(&Memory, Input, &Buffer);
-					//
-					window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
-					win32_UpdateWindow(DeviceContext, &GlobalBackbuffer, 
-										Dimension.Width, Dimension.Height);
-					//
-					int64 EndCycleCount = __rdtsc();
-					uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
 					//
 					LARGE_INTEGER WorkCounter = win32_GetWallClock();
 					real32 WorkSecondsElapsed = win32_GetSecondsElapsed(LastCounter, WorkCounter);
 					//
 					real32 SecondsElapsedForFrame = WorkSecondsElapsed;
-					while(SecondsElapsedForFrame < TargetSecondsPerFrame){
-						SecondsElapsedForFrame = win32_GetSecondsElapsed(LastCounter,
-							win32_GetWallClock());
+					if(SecondsElapsedForFrame < TargetSecondsPerFrame){
+						while(SecondsElapsedForFrame < TargetSecondsPerFrame){
+							if(SleepIsGranular){
+								DWORD SleepMS = (DWORD)(1000.0f * 
+									(TargetSecondsPerFrame - SecondsElapsedForFrame));
+								Sleep(SleepMS);
+							}
+							SecondsElapsedForFrame = 
+								win32_GetSecondsElapsed(LastCounter, win32_GetWallClock());
+						}
+					}else{
+						// TODO(doc): missed frame rate (to log)
 					}
 					//
+					window_dimension Dimension = win32_GetWindowDimension(WindowHandle);
+					win32_UpdateWindow(DeviceContext, &GlobalBackbuffer, 
+										Dimension.Width, Dimension.Height);
+					//
 #if 0
-					int32 MSPerFrame = (int32)((1000.0f * (real32)CounterElapsed) 
-						/ (real32)GlobalPerfCountFrequency);
-					int32 FPS = (int32)((real32)GlobalPerfCountFrequency / (real32)CounterElapsed);
+					int32 MSPerFrame = (int32)((1000.0f * (real32)CounterElapsed) / 
+						(real32)GlobalPerfCountFrequency);
+					int32 FPS = (int32)((real32)GlobalPerfCountFrequency / 
+						(real32)CounterElapsed);
 					int32 MCPF = (int32)((real32)CyclesElapsed / (1000.0f * 1000.0f));
 					Debugf("%dms/f, %df/s, %dMc/f\n", MSPerFrame, FPS, MCPF);
 #endif
 					LARGE_INTEGER EndCounter = win32_GetWallClock();
-					//
 					LastCounter = EndCounter;
+					//
+					int64 EndCycleCount = __rdtsc();
+					uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
 					LastCycleCount = EndCycleCount;
 				}
 			}else{
