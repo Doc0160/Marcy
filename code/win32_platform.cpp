@@ -72,7 +72,7 @@ struct win32_marcy_code{
 	bool32 IsValid;
 };
 internal win32_marcy_code
-win32_LoadGameCode(void){
+win32_LoadCode(void){
 	win32_marcy_code Result = {};
 	//
 	Result.MarcyCodeDLL = LoadLibraryA("marcy.exe");
@@ -85,6 +85,14 @@ win32_LoadGameCode(void){
 		Result.UpdateAndRender = UpdateAndRenderStub;
 	}
 	return(Result);
+}
+internal void
+win32_UnloadCode(win32_marcy_code *Code){
+	if(Code->MarcyCodeDLL){
+		FreeLibrary(Code->MarcyCodeDLL);
+	}
+	Code->IsValid = 0;
+	Code->UpdateAndRender = UpdateAndRenderStub;
 }
 //
 internal window_dimension
@@ -263,7 +271,6 @@ WinMain(
 	LPSTR     CmdLine,
 	int       CmdShow
 ){
-	win32_marcy_code MarcyCode = win32_LoadGameCode();
 	LARGE_INTEGER PerfCountFrequencyResult;
 	QueryPerformanceFrequency(&PerfCountFrequencyResult);
 	GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
@@ -325,14 +332,15 @@ WinMain(
 				int64 LastCycleCount = __rdtsc();
 				//
 				while(GlobalRunning){
-					// windows messages
+					//
+					win32_marcy_code MarcyCode = win32_LoadCode();
 					//
 					for(int ButtonIndex = 0; 
 						ButtonIndex < ArrayCount(Input->Buttons);
 						++ButtonIndex){
 						Input->Buttons[ButtonIndex].HalfTransitionCount=0;
 					}
-					//
+					// windows messages
 					win32_ProcessPendingMessages(Input);
 					//
 					offscreen_buffer Buffer = {};
@@ -385,6 +393,8 @@ WinMain(
 					_snprintf_s(temp, sizeof(temp),
 						"%.02f ms/f, %.02f f/s, %.02f  Mc/f\n", MSPerFrame, FPS, MCPF);
 					OutputDebugStringA(temp);
+					//
+					win32_UnloadCode(&MarcyCode);
 				}
 			}else{
 				// TODO
