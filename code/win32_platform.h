@@ -20,6 +20,7 @@
 #undef MessageBox
 #undef LoadLibrary
 #undef CreateFile
+#undef CopyFile
 //
 struct window_dimension{
 	int Width;

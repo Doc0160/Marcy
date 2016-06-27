@@ -75,7 +75,8 @@ internal win32_marcy_code
 win32_LoadCode(void){
 	win32_marcy_code Result = {};
 	//
-	Result.MarcyCodeDLL = LoadLibraryA("marcy.exe");
+	CopyFileA("marcy.exe", "marcy_temp.dll", FALSE);
+	Result.MarcyCodeDLL = LoadLibraryA("marcy_temp.dll");
 	if(Result.MarcyCodeDLL){
 		Result.UpdateAndRender = (update_and_render *)
 			GetProcAddress(Result.MarcyCodeDLL, "UpdateAndRender");
@@ -90,6 +91,7 @@ internal void
 win32_UnloadCode(win32_marcy_code *Code){
 	if(Code->MarcyCodeDLL){
 		FreeLibrary(Code->MarcyCodeDLL);
+		Code->MarcyCodeDLL = 0;
 	}
 	Code->IsValid = 0;
 	Code->UpdateAndRender = UpdateAndRenderStub;
@@ -331,9 +333,15 @@ WinMain(
 				LARGE_INTEGER LastCounter = win32_GetWallClock();
 				int64 LastCycleCount = __rdtsc();
 				//
+				uint32 LoadCounter = 0;
+				win32_marcy_code MarcyCode = win32_LoadCode();
 				while(GlobalRunning){
 					//
-					win32_marcy_code MarcyCode = win32_LoadCode();
+					if(LoadCounter++ > 120){
+						win32_UnloadCode(&MarcyCode);
+						MarcyCode = win32_LoadCode();
+						LoadCounter = 0;
+					}
 					//
 					for(int ButtonIndex = 0; 
 						ButtonIndex < ArrayCount(Input->Buttons);
@@ -393,8 +401,6 @@ WinMain(
 					_snprintf_s(temp, sizeof(temp),
 						"%.02f ms/f, %.02f f/s, %.02f  Mc/f\n", MSPerFrame, FPS, MCPF);
 					OutputDebugStringA(temp);
-					//
-					win32_UnloadCode(&MarcyCode);
 				}
 			}else{
 				// TODO
