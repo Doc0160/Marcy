@@ -15,7 +15,7 @@ RenderWeirdGradient(offscreen_buffer *Backbuffer, int BlueOffset, int GreenOffse
     }
 }
 
-UPDATE_AND_RENDER(UpdateAndRender){
+extern "C" UPDATE_AND_RENDER(UpdateAndRender){
 	Assert(sizeof(state) <= Memory->PermanentStorageSize);
 	state *State = (state *)Memory->PermanentStorage;
 	if(!Memory->IsInitialized){

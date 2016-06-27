@@ -5,10 +5,12 @@ echo "%MODE%"
 ibt.exe -begin marcy.ibt
 ibt.exe -begin central.ibt
 pushd .\bin
-cl %CommonCompilerFlags% ..\code\marcy.cpp -Fmmarcy.map /DLL
+cl %CommonCompilerFlags% ..\code\marcy.cpp -Fmmarcy.map /link /DLL /EXPORT:UpdateAndRender
 set LastError=%ERRORLEVEL%
-..\ibt.exe -end ..\central.ibt %LastError%
-..\ibt.exe -begin ..\win32.ibt
+popd
+ibt.exe -end central.ibt %LastError%
+ibt.exe -begin win32.ibt
+pushd .\bin
 if "%MODE%" == "x64" (
 	cl %CommonCompilerFlags% ..\code\win32_platform.cpp -Fmwin32_marcy.map /link -subsystem:windows,5.2 %CommonLinkererFlags%
 ) else (

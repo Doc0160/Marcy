@@ -75,7 +75,7 @@ internal win32_marcy_code
 win32_LoadGameCode(void){
 	win32_marcy_code Result = {};
 	//
-	Result.MarcyCodeDLL = LoadLibraryA("marcy.dll");
+	Result.MarcyCodeDLL = LoadLibraryA("marcy.exe");
 	if(Result.MarcyCodeDLL){
 		Result.UpdateAndRender = (update_and_render *)
 			GetProcAddress(Result.MarcyCodeDLL, "UpdateAndRender");
