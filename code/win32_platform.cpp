@@ -1,6 +1,6 @@
 // #include "platform.h"
-#include "win32_platform.h"
 #include "marcy.h"
+#include "win32_platform.h"
 /*
 	NOT FINAL PLATFORM LAYER
 */
@@ -65,18 +65,26 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile){
 	}
 	return Result;
 }
-struct win32_marcy_code{
-	HMODULE MarcyCodeDLL;
-	update_and_render *UpdateAndRender;
-	//
-	bool32 IsValid;
-};
+inline FILETIME
+win32_GetLastWriteTime(char *Filename){
+	FILETIME LastWriteTime = {};
+	WIN32_FIND_DATA FindData;
+	HANDLE FindHandle =  FindFirstFileA(Filename, &FindData);
+	if(FindHandle != INVALID_HANDLE_VALUE){
+		LastWriteTime = FindData.ftLastWriteTime;
+		FindClose(FindHandle);
+	}
+	return LastWriteTime;
+}
 internal win32_marcy_code
-win32_LoadCode(void){
+win32_LoadCode(char *SourceDLLName){
 	win32_marcy_code Result = {};
 	//
-	CopyFileA("marcy.exe", "marcy_temp.dll", FALSE);
-	Result.MarcyCodeDLL = LoadLibraryA("marcy_temp.dll");
+	char *TempDLLName = "marcy_temp.dll";
+	//
+	Result.DLLLastWriteTime = win32_GetLastWriteTime(SourceDLLName);
+	CopyFileA(SourceDLLName, TempDLLName, FALSE);
+	Result.MarcyCodeDLL = LoadLibraryA(TempDLLName);
 	if(Result.MarcyCodeDLL){
 		Result.UpdateAndRender = (update_and_render *)
 			GetProcAddress(Result.MarcyCodeDLL, "UpdateAndRender");
@@ -333,14 +341,15 @@ WinMain(
 				LARGE_INTEGER LastCounter = win32_GetWallClock();
 				int64 LastCycleCount = __rdtsc();
 				//
+				char *SourceDLLName = "marcy.dll";
+				win32_marcy_code MarcyCode = win32_LoadCode(SourceDLLName);
 				uint32 LoadCounter = 0;
-				win32_marcy_code MarcyCode = win32_LoadCode();
 				while(GlobalRunning){
 					//
-					if(LoadCounter++ > 120){
+					FILETIME NewDLLWriteTime = win32_GetLastWriteTime(SourceDLLName);
+					if(CompareFileTime(&NewDLLWriteTime, &MarcyCode.DLLLastWriteTime) != 0){
 						win32_UnloadCode(&MarcyCode);
-						MarcyCode = win32_LoadCode();
-						LoadCounter = 0;
+						MarcyCode = win32_LoadCode(SourceDLLName);
 					}
 					//
 					for(int ButtonIndex = 0; 
@@ -373,7 +382,7 @@ WinMain(
 						}
 						real32 TestSecondsElapsedForFrame = 
 								win32_GetSecondsElapsed(LastCounter, win32_GetWallClock());
-						Assert(TestSecondsElapsedForFrame <= TargetSecondsPerFrame);
+						// Assert(TestSecondsElapsedForFrame <= TargetSecondsPerFrame);
 						while(SecondsElapsedForFrame < TargetSecondsPerFrame){
 							SecondsElapsedForFrame = 
 								win32_GetSecondsElapsed(LastCounter, win32_GetWallClock());

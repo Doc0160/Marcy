@@ -35,5 +35,13 @@ struct win32_offscreen_buffer{
 	int        Height;
 	int        Pitch;
 };
+//
+struct win32_marcy_code{
+	HMODULE MarcyCodeDLL;
+	FILETIME DLLLastWriteTime;
+	update_and_render *UpdateAndRender;
+	//
+	bool32 IsValid;
+};
 #define WIN32_PLATFORM_H
 #endif

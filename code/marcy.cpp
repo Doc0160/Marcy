@@ -1,7 +1,8 @@
 #include "marcy.h"
 
 internal void
-RenderWeirdGradient(offscreen_buffer *Backbuffer, int BlueOffset, int GreenOffset, int RedOffset){
+RenderWeirdGradient(offscreen_buffer *Backbuffer, int BlueOffset,
+		int GreenOffset, int RedOffset){
     uint8 *Row = (uint8 *)Backbuffer->Memory;
     for(int Y = 0;Y<Backbuffer->Height;++Y){
         uint32 *Pixel = (uint32*)Row;
@@ -9,7 +10,7 @@ RenderWeirdGradient(offscreen_buffer *Backbuffer, int BlueOffset, int GreenOffse
             uint8 Blue  = (uint8)(X + BlueOffset);
             uint8 Green = (uint8)(Y + GreenOffset);
             uint8 Red = (uint8)(RedOffset);
-            *Pixel++    = ((Red << 16) |(Green << 8) | Blue);
+            *Pixel++    = ((Red << 16) | (Green << 8) | Blue);
         }
         Row += Backbuffer->Pitch;
     }
@@ -22,7 +23,8 @@ extern "C" UPDATE_AND_RENDER(UpdateAndRender){
 		Assert((&Input->Back - &Input->Buttons[0]) == 
 			(ArrayCount(Input->Buttons) - 1));
 		char *Filename = __FILE__;
-		DEBUG_read_file_result File = Memory->DEBUGPlatformReadEntireFile(Filename);
+		DEBUG_read_file_result File = 
+			Memory->DEBUGPlatformReadEntireFile(Filename);
 		if(File.Contents){
 			Memory->DEBUGPlatformWriteEntireFile("test.out", 
 				File.ContentsSize, File.Contents);
@@ -47,14 +49,6 @@ extern "C" UPDATE_AND_RENDER(UpdateAndRender){
 	}else if(Input->Back.EndedDown){
 		State->RedOffset=255;
 	}
-	RenderWeirdGradient(Screen, State->GreenOffset, State->BlueOffset, State->RedOffset);
+	RenderWeirdGradient(Screen, State->GreenOffset, 
+		State->BlueOffset, State->RedOffset);
 }
-
-#if MARCY_WIN32
-#include <windows.h>
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, 
-	DWORD fdwReason,
-	LPVOID lpReserved){
-    return(TRUE);
-}
-#endif
