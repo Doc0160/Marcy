@@ -281,6 +281,17 @@ WinMain(
 	LPSTR     CmdLine,
 	int       CmdShow
 ){
+	// NOTE(doc): never use MAX_PATH, it's wrong and can lead to truncated path
+		// but since it's just debug code ~~
+	char EXEFilename[MAX_PATH];
+	DWORD SizeOfFilename = GetModuleFileNameA(0, EXEFilename, sizeof(EXEFilename));
+	char *OnePastLastSlash = EXEFilename;
+	for(char *Scan = EXEFilename; *Scan; ++Scan){
+		if(*Scan == '\\'){
+			OnePastLastSlash = Scan + 1;
+		}
+	}
+	//
 	LARGE_INTEGER PerfCountFrequencyResult;
 	QueryPerformanceFrequency(&PerfCountFrequencyResult);
 	GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
