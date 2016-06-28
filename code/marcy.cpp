@@ -10,8 +10,8 @@ RenderWeirdGradient(offscreen_buffer *Backbuffer, int BlueOffset,
             uint8 Blue  = (uint8)(X + BlueOffset);
             uint8 Green = (uint8)(Y + GreenOffset);
             uint8 Red = (uint8)(RedOffset);
-            // *Pixel++    = ((Red << 16) | (Green << 8) | Blue);
-            *Pixel++    = ((Green << 8) | Blue);
+            *Pixel++    = ((Red << 16) | (Green << 8) | Blue);
+            // *Pixel++    = ((Green << 8) | Blue);
         }
         Row += Backbuffer->Pitch;
     }
@@ -76,5 +76,13 @@ extern "C" UPDATE_AND_RENDER(UpdateAndRender){
 	}
 	RenderWeirdGradient(Screen, State->GreenOffset, 
 		State->BlueOffset, State->RedOffset);
+	for(int ButtonIndex = 0; 
+		ButtonIndex < ArrayCount(Input->Mouse.Buttons);
+		++ButtonIndex){
+		if(Input->Mouse.Buttons[ButtonIndex].EndedDown){
+			RenderPlayer(Screen, 10 + 20 * ButtonIndex, 10);
+		}
+	}
 	RenderPlayer(Screen, State->PlayerX, State->PlayerY);
+	RenderPlayer(Screen, Input->Mouse.X, Input->Mouse.Y);
 }

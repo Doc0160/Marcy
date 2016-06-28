@@ -202,10 +202,11 @@ win32_MainWindowCallback(
 }
 //
 internal void
-win32_ProcessKeyboardMessage(input_button *NewState, bool32 IsDown){
-	// Assert(NewState->EndedDown != IsDown);
-	NewState->EndedDown = IsDown;
-	++NewState->HalfTransitionCount;
+win32_ProcessKeyMessage(input_button *NewState, bool32 IsDown){
+	if(NewState->EndedDown != IsDown){
+		NewState->EndedDown = IsDown;
+		++NewState->HalfTransitionCount;
+	}
 }
 internal void
 win32_ProcessPendingMessages(input *Input){
@@ -226,28 +227,28 @@ win32_ProcessPendingMessages(input *Input){
 					switch(VKCode){
 						case VK_LEFT:
 						case 'Q':{
-							win32_ProcessKeyboardMessage(&Input->Keyboard.Left, IsDown);
+							win32_ProcessKeyMessage(&Input->Keyboard.Left, IsDown);
 						} break;
 						case VK_RIGHT:
 						case 'D':{
-							win32_ProcessKeyboardMessage(&Input->Keyboard.Right, IsDown);
+							win32_ProcessKeyMessage(&Input->Keyboard.Right, IsDown);
 						} break;
 						case VK_UP:
 						case 'Z':{
-							win32_ProcessKeyboardMessage(&Input->Keyboard.Up, IsDown);
+							win32_ProcessKeyMessage(&Input->Keyboard.Up, IsDown);
 						} break;
 						case VK_DOWN:
 						case 'S':{
-							win32_ProcessKeyboardMessage(&Input->Keyboard.Down, IsDown);
+							win32_ProcessKeyMessage(&Input->Keyboard.Down, IsDown);
 						} break;
 						case VK_RETURN:
 						case VK_SPACE:
 						case 'E':{
-							win32_ProcessKeyboardMessage(&Input->Keyboard.Enter, IsDown);
+							win32_ProcessKeyMessage(&Input->Keyboard.Enter, IsDown);
 						} break;
 						case VK_BACK:
 						case 'A':{
-							win32_ProcessKeyboardMessage(&Input->Keyboard.Back, IsDown);
+							win32_ProcessKeyMessage(&Input->Keyboard.Back, IsDown);
 						} break;
 						case VK_ESCAPE:{
 							GlobalRunning = 0;
@@ -430,6 +431,23 @@ WinMain(
 					// windows messages
 					win32_ProcessPendingMessages(Input);
 					//
+					POINT MouseP;
+					GetCursorPos(&MouseP);
+					ScreenToClient(WindowHandle, &MouseP);
+					Input->Mouse.X = MouseP.x;
+					Input->Mouse.Y = MouseP.y;
+					Input->Mouse.Z = 0;
+					win32_ProcessKeyMessage(&Input->Mouse.Buttons[0],
+						GetKeyState(VK_LBUTTON) & (1 << 15));
+					win32_ProcessKeyMessage(&Input->Mouse.Buttons[1],
+						GetKeyState(VK_MBUTTON) & (1 << 15));
+					win32_ProcessKeyMessage(&Input->Mouse.Buttons[2],
+						GetKeyState(VK_RBUTTON) & (1 << 15));
+					win32_ProcessKeyMessage(&Input->Mouse.Buttons[3],
+						GetKeyState(VK_XBUTTON1) & (1 << 15));
+					win32_ProcessKeyMessage(&Input->Mouse.Buttons[4],
+						GetKeyState(VK_XBUTTON2) & (1 << 15));
+					//
 					thread_context Thread = {};
 					offscreen_buffer Buffer = {};
 					Buffer.Memory = GlobalBackbuffer.Memory;
@@ -473,16 +491,16 @@ WinMain(
 					win32_UpdateWindow(DeviceContext, &GlobalBackbuffer, 
 										Dimension.Width, Dimension.Height);
 					//
-					int64 EndCycleCount = __rdtsc();
+					/*int64 EndCycleCount = __rdtsc();
 					uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
 					LastCycleCount = EndCycleCount;
-					//
+					
 					real64 FPS = 1000.0f * (1.0f / MSPerFrame);
 					real64 MCPF = ((real64)CyclesElapsed / (1000.0f * 1000.0f));
 					char temp[1024];
 					_snprintf_s(temp, sizeof(temp),
 						"%.02f ms/f, %.02f f/s, %.02f  Mc/f\n", MSPerFrame, FPS, MCPF);
-					OutputDebugStringA(temp);
+					OutputDebugStringA(temp);*/
 				}
 			}else{
 				// TODO

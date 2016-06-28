@@ -107,8 +107,8 @@ struct keyboard_input{
 struct mouse_input{
 	// TODO(doc): think more about this struct ?
 	// uint32 MouseButtons;
-	input_button Buttons[3];
-	int32 MouseX, MouseY, MouseZ;
+	input_button Buttons[5];
+	int32 X, Y, Z;
 };
 struct input{
 	mouse_input Mouse;
