@@ -8,13 +8,15 @@
 *.ilk
 *.so
 *.dylib
-*.dll
+#*.dll
 *.mod
 *.smod
 *.lai
 *.la
 *.a
 *.lib
-*.exe
+#*.exe
 *.out
 *.app
+*.map
+*.exp
