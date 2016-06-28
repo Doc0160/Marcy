@@ -68,19 +68,15 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile){
 inline FILETIME
 win32_GetLastWriteTime(char *Filename){
 	FILETIME LastWriteTime = {};
-	WIN32_FIND_DATA FindData;
-	HANDLE FindHandle =  FindFirstFileA(Filename, &FindData);
-	if(FindHandle != INVALID_HANDLE_VALUE){
-		LastWriteTime = FindData.ftLastWriteTime;
-		FindClose(FindHandle);
+	WIN32_FIND_DATA Data;
+	if(GetFileAttributesEx(Filename, GetFileExInfoStandard, &Data)){
+		LastWriteTime = Data.ftLastWriteTime;
 	}
-	return LastWriteTime;
+	return(LastWriteTime);
 }
 internal win32_marcy_code
-win32_LoadCode(char *SourceDLLName){
+win32_LoadCode(char *SourceDLLName, char *TempDLLName){
 	win32_marcy_code Result = {};
-	//
-	char *TempDLLName = "marcy_temp.dll";
 	//
 	Result.DLLLastWriteTime = win32_GetLastWriteTime(SourceDLLName);
 	CopyFileA(SourceDLLName, TempDLLName, FALSE);
@@ -154,8 +150,13 @@ win32_UpdateWindow(
 	int Width, 
 	int Height
 ){
-	StretchDIBits(DeviceContext,
-		0, 0, Width,             Height,             // to
+	// StretchDIBits(DeviceContext,
+		// 0, 0, Width,             Height,             // to
+		// 0, 0, Backbuffer->Width, Backbuffer->Height, // from
+		// Backbuffer->Memory, &Backbuffer->Info,
+		// DIB_RGB_COLORS, SRCCOPY);
+		StretchDIBits(DeviceContext,
+		0, 0, Backbuffer->Width, Backbuffer->Height,             // to
 		0, 0, Backbuffer->Width, Backbuffer->Height, // from
 		Backbuffer->Memory, &Backbuffer->Info,
 		DIB_RGB_COLORS, SRCCOPY);
@@ -170,6 +171,13 @@ win32_MainWindowCallback(
 	LRESULT Result = 0;
 	switch(Msg){
 		case WM_ACTIVATEAPP:{
+#if 0
+			if(WParam == TRUE){
+				SetLayeredWindowAttributes(wnd, RGB(0, 0, 0), 255, LWA_ALPHA);
+			}else{
+				SetLayeredWindowAttributes(wnd, RGB(0, 0, 0), 128, LWA_ALPHA);
+			}
+#endif
 		} break;
 		case WM_CLOSE:{
 			GlobalRunning = 0;
@@ -194,7 +202,7 @@ win32_MainWindowCallback(
 //
 internal void
 win32_ProcessKeyboardMessage(input_button *NewState, bool32 IsDown){
-	Assert(NewState->EndedDown != IsDown);
+	// Assert(NewState->EndedDown != IsDown);
 	NewState->EndedDown = IsDown;
 	++NewState->HalfTransitionCount;
 }
@@ -243,6 +251,10 @@ win32_ProcessPendingMessages(input *Input){
 						case VK_ESCAPE:{
 							GlobalRunning = 0;
 						} break;
+						case VK_F5:{
+						} break;
+						case VK_F9:{
+						} break;
 						case VK_F4:{
 							bool32 AltKeyWasDown = (Message.lParam & (1 << 29));
 							if(AltKeyWasDown){
@@ -274,6 +286,47 @@ win32_GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End){
 	return(Result);
 }
 //
+internal void
+CatStrings(size_t SourceACount, char *SourceA,
+		size_t SourceBCount, char *SourceB,
+		size_t DestCount, char *Dest){
+	for(int Index = 0;  Index < SourceACount; ++Index){
+		*Dest++ = *SourceA++;
+	}
+	for(int Index = 0;  Index < SourceBCount; ++Index){
+		*Dest++ = *SourceB++;
+	}
+	*Dest++ = 0;
+}
+internal int
+StringLength(char *String){
+	int Count = 0;
+	while(*String++){
+		++Count;
+	}
+	return Count;
+}
+//
+internal void
+win32_GetEXEFileName(win32_state *State){
+	DWORD SizeOfFilename = GetModuleFileNameA(0, State->EXEFileName, 
+		sizeof(State->EXEFileName));
+	State->OnePastLastEXEFileNameSlash = State->EXEFileName;
+	for(char *Scan = State->EXEFileName; *Scan; ++Scan){
+		if(*Scan == '\\'){
+			State->OnePastLastEXEFileNameSlash = Scan + 1;
+		}
+	}
+}
+internal void
+win32_BuildEXEPathFileName(win32_state *State, char *Filename,
+						int DestCount, char *Dest){
+	CatStrings(State->OnePastLastEXEFileNameSlash - State->EXEFileName, 
+			State->EXEFileName,
+			StringLength(Filename), Filename,
+			DestCount, Dest);
+}
+//
 int CALLBACK 
 WinMain(
 	HINSTANCE Instance,
@@ -281,16 +334,14 @@ WinMain(
 	LPSTR     CmdLine,
 	int       CmdShow
 ){
-	// NOTE(doc): never use MAX_PATH, it's wrong and can lead to truncated path
-		// but since it's just debug code ~~
-	char EXEFilename[MAX_PATH];
-	DWORD SizeOfFilename = GetModuleFileNameA(0, EXEFilename, sizeof(EXEFilename));
-	char *OnePastLastSlash = EXEFilename;
-	for(char *Scan = EXEFilename; *Scan; ++Scan){
-		if(*Scan == '\\'){
-			OnePastLastSlash = Scan + 1;
-		}
-	}
+	win32_state win32_State = {};
+	win32_GetEXEFileName(&win32_State);
+	char SourceCodeDLLFullpath[WIN32_STATE_FILE_NAME_COUNT];
+	win32_BuildEXEPathFileName(&win32_State, "marcy.dll",
+		sizeof(SourceCodeDLLFullpath), SourceCodeDLLFullpath);
+	char TempCodeDLLFullpath[WIN32_STATE_FILE_NAME_COUNT];
+	win32_BuildEXEPathFileName(&win32_State, "marcy_temp.dll",
+		sizeof(TempCodeDLLFullpath), TempCodeDLLFullpath);
 	//
 	LARGE_INTEGER PerfCountFrequencyResult;
 	QueryPerformanceFrequency(&PerfCountFrequencyResult);
@@ -302,8 +353,8 @@ WinMain(
 	bool32 SleepIsGranular = (timeBeginPeriod(DesiredSchedulerMS) == TIMERR_NOERROR);
 	//
 	WNDCLASSA WindowClass = {};
-	win32_ResizeDIBSelection(&GlobalBackbuffer, 1280/2, 720/2);
-	WindowClass.style       = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
+	win32_ResizeDIBSelection(&GlobalBackbuffer, 1920/2, 1080/2);
+	WindowClass.style       = /*CS_OWNDC |*/ CS_HREDRAW | CS_VREDRAW;
 	WindowClass.lpfnWndProc = win32_MainWindowCallback;
 	WindowClass.hInstance   = Instance;
 	// WindowClass.hIcon         = ;
@@ -316,8 +367,9 @@ WinMain(
 	//
 	if(RegisterClassA(&WindowClass)){
 		HWND WindowHandle = CreateWindowExA(
-			0, "MARCY_WC", "Marcy",
-			WS_OVERLAPPEDWINDOW|WS_VISIBLE,
+			0,// WS_EX_TOPMOST | WS_EX_LAYERED, 
+			WindowClass.lpszClassName, "Marcy",
+			WS_OVERLAPPEDWINDOW | WS_VISIBLE,
 			CW_USEDEFAULT, CW_USEDEFAULT,
 			CW_USEDEFAULT, CW_USEDEFAULT,
 			0, 0, Instance, 0);
@@ -352,15 +404,14 @@ WinMain(
 				LARGE_INTEGER LastCounter = win32_GetWallClock();
 				int64 LastCycleCount = __rdtsc();
 				//
-				char *SourceDLLName = "marcy.dll";
-				win32_marcy_code MarcyCode = win32_LoadCode(SourceDLLName);
+				win32_marcy_code MarcyCode = win32_LoadCode(SourceCodeDLLFullpath, TempCodeDLLFullpath);
 				uint32 LoadCounter = 0;
 				while(GlobalRunning){
 					//
-					FILETIME NewDLLWriteTime = win32_GetLastWriteTime(SourceDLLName);
+					FILETIME NewDLLWriteTime = win32_GetLastWriteTime(SourceCodeDLLFullpath);
 					if(CompareFileTime(&NewDLLWriteTime, &MarcyCode.DLLLastWriteTime) != 0){
 						win32_UnloadCode(&MarcyCode);
-						MarcyCode = win32_LoadCode(SourceDLLName);
+						MarcyCode = win32_LoadCode(SourceCodeDLLFullpath, TempCodeDLLFullpath);
 					}
 					//
 					for(int ButtonIndex = 0; 
@@ -415,7 +466,7 @@ WinMain(
 					uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
 					LastCycleCount = EndCycleCount;
 					//
-					real64 FPS = 0.0f;
+					real64 FPS = 1000.0f * (1.0f / MSPerFrame);
 					real64 MCPF = ((real64)CyclesElapsed / (1000.0f * 1000.0f));
 					char temp[1024];
 					_snprintf_s(temp, sizeof(temp),

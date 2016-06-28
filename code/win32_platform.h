@@ -43,5 +43,12 @@ struct win32_marcy_code{
 	//
 	bool32 IsValid;
 };
+//
+#define WIN32_STATE_FILE_NAME_COUNT MAX_PATH
+struct win32_state{
+	//
+	char EXEFileName[WIN32_STATE_FILE_NAME_COUNT];
+	char *OnePastLastEXEFileNameSlash;
+};
 #define WIN32_PLATFORM_H
 #endif

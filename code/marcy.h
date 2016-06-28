@@ -5,6 +5,7 @@
 #define persist static
 
 #include <stdint.h>
+#include <math.h>
 /*
 	NOTE(doc):
 		MARCY_SLOW:
@@ -123,6 +124,9 @@ struct state{
 	int BlueOffset;
 	int GreenOffset;
 	int RedOffset;
+	//
+	int PlayerX;
+	int PlayerY;
 };
 #define MARCY_H
 #endif
