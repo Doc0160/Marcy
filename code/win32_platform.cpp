@@ -41,7 +41,8 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile){
 		LARGE_INTEGER FileSize;
 		if(GetFileSizeEx(FileHandle, &FileSize)){
 			uint32 FileSize32 = SafeTruncateUInt64(FileSize.QuadPart);
-			Result.Contents = VirtualAlloc(0, FileSize32, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+			Result.Contents = VirtualAlloc(0, FileSize32, 
+				MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
 			if(Result.Contents){
 				DWORD BytesRead;
 				if(ReadFile(FileHandle, Result.Contents, FileSize32, &BytesRead, 0)
@@ -87,7 +88,7 @@ win32_LoadCode(char *SourceDLLName, char *TempDLLName){
 		Result.IsValid = (Result.UpdateAndRender!=0);
 	}
 	if(!Result.IsValid){
-		Result.UpdateAndRender = UpdateAndRenderStub;
+		Result.UpdateAndRender = 0;
 	}
 	return(Result);
 }
@@ -98,7 +99,7 @@ win32_UnloadCode(win32_marcy_code *Code){
 		Code->MarcyCodeDLL = 0;
 	}
 	Code->IsValid = 0;
-	Code->UpdateAndRender = UpdateAndRenderStub;
+	Code->UpdateAndRender = 0;
 }
 //
 internal window_dimension
@@ -392,8 +393,10 @@ WinMain(
 			//
 			uint64 TotalSize = Memory.PermanentStorageSize 
 				+ Memory.TransientStorageSize;
-			Memory.PermanentStorage = VirtualAlloc(BaseAddress, 
-				(size_t)TotalSize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE); 
+			//TODO(doc): | MEM_LARGE_PAGES, call ajust token when not on winxp
+			Memory.PermanentStorage = VirtualAlloc(BaseAddress, (size_t)TotalSize,
+							MEM_RESERVE | MEM_COMMIT,
+							PAGE_READWRITE); 
 			Memory.TransientStorage = ((uint8 *)Memory.PermanentStorage 
 				+ Memory.PermanentStorageSize);
 			//
@@ -427,7 +430,9 @@ WinMain(
 					Buffer.Width = GlobalBackbuffer.Width;
 					Buffer.Height = GlobalBackbuffer.Height;
 					Buffer.Pitch = GlobalBackbuffer.Pitch;
-					MarcyCode.UpdateAndRender(&Memory, Input, &Buffer);
+					if(MarcyCode.UpdateAndRender){
+						MarcyCode.UpdateAndRender(&Memory, Input, &Buffer);
+					}
 					//
 					LARGE_INTEGER WorkCounter = win32_GetWallClock();
 					real32 WorkSecondsElapsed = win32_GetSecondsElapsed(LastCounter, 

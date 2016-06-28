@@ -117,7 +117,6 @@ struct memory{
 //
 #define UPDATE_AND_RENDER(name) void name(memory *Memory, input *Input, offscreen_buffer *Screen)
 typedef UPDATE_AND_RENDER(update_and_render);
-UPDATE_AND_RENDER(UpdateAndRenderStub){}
 //
 //
 struct state{
