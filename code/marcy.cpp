@@ -39,15 +39,15 @@ extern "C" UPDATE_AND_RENDER(UpdateAndRender){
 	Assert(sizeof(state) <= Memory->PermanentStorageSize);
 	state *State = (state *)Memory->PermanentStorage;
 	if(!Memory->IsInitialized){
-		Assert((&Input->Back - &Input->Buttons[0]) == 
-			(ArrayCount(Input->Buttons) - 1));
+		Assert((&Input->Keyboard.Back - &Input->Keyboard.Buttons[0]) == 
+			(ArrayCount(Input->Keyboard.Buttons) - 1));
 		char *Filename = __FILE__;
 		DEBUG_read_file_result File = 
-			Memory->DEBUGPlatformReadEntireFile(Filename);
+			Memory->DEBUGPlatformReadEntireFile(Thread, Filename);
 		if(File.Contents){
-			Memory->DEBUGPlatformWriteEntireFile("test.out", 
+			Memory->DEBUGPlatformWriteEntireFile(Thread, "test.out", 
 				File.ContentsSize, File.Contents);
-			Memory->DEBUGPlatformFreeFileMemory(File.Contents);
+			Memory->DEBUGPlatformFreeFileMemory(Thread, File.Contents);
 		}
 		State->PlayerX = 100;
 		State->PlayerY = 100;
@@ -55,23 +55,23 @@ extern "C" UPDATE_AND_RENDER(UpdateAndRender){
 		//TODO(doc): may be more appropriate to do in the platform layer
 		Memory->IsInitialized=1;
 	}
-	if(Input->Up.EndedDown){
+	if(Input->Keyboard.Up.EndedDown){
 		State->BlueOffset++;
 		State->PlayerY-=5;
-	}else if(Input->Down.EndedDown){
+	}else if(Input->Keyboard.Down.EndedDown){
 		State->BlueOffset--;
 		State->PlayerY+=5;
 	}
-	if(Input->Left.EndedDown){
+	if(Input->Keyboard.Left.EndedDown){
 		State->GreenOffset++;
 		State->PlayerX-=5;
-	}else if(Input->Right.EndedDown){
+	}else if(Input->Keyboard.Right.EndedDown){
 		State->GreenOffset--;
 		State->PlayerX+=5;
 	}
-	if(Input->Enter.EndedDown){
+	if(Input->Keyboard.Enter.EndedDown){
 		// State->RedOffset--;
-	}else if(Input->Back.EndedDown){
+	}else if(Input->Keyboard.Back.EndedDown){
 		// State->RedOffset++;
 	}
 	RenderWeirdGradient(Screen, State->GreenOffset, 

@@ -37,33 +37,15 @@ typedef double real64;
 #else
 #define Assert(x)
 #endif
+//
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 #define MIN(x, y) ((x) <= (y) ? (x) : (y))
 #define MAX(x, y) ((x) >= (y) ? (x) : (y))
-// TODO(doc): 64 bits ???
+//
 #define Kilobytes(value) ((value)*1024LL)
 #define Megabytes(value) (Kilobytes(value)*1024LL)
 #define Gigabytes(value) (Megabytes(value)*1024LL)
 #define Terabytes(value) (Gigabytes(value)*1024LL)
-#if MARCY_DEBUG
-struct DEBUG_read_file_result{
-	uint32 ContentsSize;
-	void *Contents;
-};
-//
-#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) DEBUG_read_file_result name(char *Filename)
-typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
-#define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name(void *Memory)
-typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
-#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) bool32 name(char *Filename, uint32 MemorySize, void *Memory)
-typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
-//
-// DEBUG_read_file_result DEBUGPlatformReadEntireFile(char *Filename);
-// void DEBUGPlatformFreeFileMemory(void *Memory);
-//
-// bool32
-// DEBUGPlatformWriteEntireFile(char *Filename, uint32 MemorySize, void *Memory);
-#endif
 //
 inline uint32
 SafeTruncateUInt64(uint64 value){
@@ -72,6 +54,30 @@ SafeTruncateUInt64(uint64 value){
 	uint32 value32 = (uint32)value;
 	return value32;
 }
+//
+struct thread_context{
+	
+};
+//
+#if MARCY_DEBUG
+struct DEBUG_read_file_result{
+	uint32 ContentsSize;
+	void *Contents;
+};
+//
+#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) DEBUG_read_file_result name(thread_context *Thread, char *Filename)
+typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
+#define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name(thread_context *Thread,void *Memory)
+typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
+#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) bool32 name(thread_context *Thread, char *Filename, uint32 MemorySize, void *Memory)
+typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
+//
+// DEBUG_read_file_result DEBUGPlatformReadEntireFile(char *Filename);
+// void DEBUGPlatformFreeFileMemory(void *Memory);
+//
+// bool32
+// DEBUGPlatformWriteEntireFile(char *Filename, uint32 MemorySize, void *Memory);
+#endif
 // NOTE(doc): may cause platform inefficiency
 struct offscreen_buffer{
 	void       *Memory;
@@ -84,11 +90,7 @@ struct input_button{
 	int HalfTransitionCount;
 	bool32 EndedDown;
 };
-struct mouse{
-	input_button Right;
-	input_button Left;
-};
-struct input{
+struct keyboard_input{
 	union{
 		input_button Buttons[6];
 		struct{
@@ -101,6 +103,16 @@ struct input{
 			input_button Back;
 		};
 	};
+};
+struct mouse_input{
+	// TODO(doc): think more about this struct ?
+	// uint32 MouseButtons;
+	input_button Buttons[3];
+	int32 MouseX, MouseY, MouseZ;
+};
+struct input{
+	mouse_input Mouse;
+	keyboard_input Keyboard;
 };
 //
 struct memory{
@@ -115,8 +127,9 @@ struct memory{
 	debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
 };
 //
-#define UPDATE_AND_RENDER(name) void name(memory *Memory, input *Input, offscreen_buffer *Screen)
+#define UPDATE_AND_RENDER(name) void name(thread_context *Thread, memory *Memory, input *Input, offscreen_buffer *Screen)
 typedef UPDATE_AND_RENDER(update_and_render);
+//
 //
 //
 struct state{

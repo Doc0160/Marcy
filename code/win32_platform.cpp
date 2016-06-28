@@ -51,7 +51,7 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile){
 					Result.ContentsSize = FileSize32;
 				}else{
 					//TODO
-					DEBUGPlatformFreeFileMemory(Result.Contents);
+					DEBUGPlatformFreeFileMemory(Thread, Result.Contents);
 					Result.Contents=0;
 				}
 			}else{
@@ -226,28 +226,28 @@ win32_ProcessPendingMessages(input *Input){
 					switch(VKCode){
 						case VK_LEFT:
 						case 'Q':{
-							win32_ProcessKeyboardMessage(&Input->Left, IsDown);
+							win32_ProcessKeyboardMessage(&Input->Keyboard.Left, IsDown);
 						} break;
 						case VK_RIGHT:
 						case 'D':{
-							win32_ProcessKeyboardMessage(&Input->Right, IsDown);
+							win32_ProcessKeyboardMessage(&Input->Keyboard.Right, IsDown);
 						} break;
 						case VK_UP:
 						case 'Z':{
-							win32_ProcessKeyboardMessage(&Input->Up, IsDown);
+							win32_ProcessKeyboardMessage(&Input->Keyboard.Up, IsDown);
 						} break;
 						case VK_DOWN:
 						case 'S':{
-							win32_ProcessKeyboardMessage(&Input->Down, IsDown);
+							win32_ProcessKeyboardMessage(&Input->Keyboard.Down, IsDown);
 						} break;
 						case VK_RETURN:
 						case VK_SPACE:
 						case 'E':{
-							win32_ProcessKeyboardMessage(&Input->Enter, IsDown);
+							win32_ProcessKeyboardMessage(&Input->Keyboard.Enter, IsDown);
 						} break;
 						case VK_BACK:
 						case 'A':{
-							win32_ProcessKeyboardMessage(&Input->Back, IsDown);
+							win32_ProcessKeyboardMessage(&Input->Keyboard.Back, IsDown);
 						} break;
 						case VK_ESCAPE:{
 							GlobalRunning = 0;
@@ -361,11 +361,6 @@ WinMain(
 	// WindowClass.hIcon         = ;
 	WindowClass.lpszClassName = "MARCY_WC";
 	//
-	// TODO(doc): how to get that on windows
-	int MonitorRefreshHz = 60;
-	int UpdateHz = MonitorRefreshHz / 2;
-	real32 TargetSecondsPerFrame = 1.0f / (real32)UpdateHz;
-	//
 	if(RegisterClassA(&WindowClass)){
 		HWND WindowHandle = CreateWindowExA(
 			0,// WS_EX_TOPMOST | WS_EX_LAYERED, 
@@ -375,8 +370,18 @@ WinMain(
 			CW_USEDEFAULT, CW_USEDEFAULT,
 			0, 0, Instance, 0);
 		if(WindowHandle){
-			GlobalRunning=1;
 			HDC DeviceContext = GetDC(WindowHandle);
+			//
+			int MonitorRefreshHz = 60;
+			// TODO(doc): how to get that on windows
+			int win32_RefreshRate = GetDeviceCaps(DeviceContext, VREFRESH);
+			if(win32_RefreshRate > 0){
+				MonitorRefreshHz = win32_RefreshRate;
+			}
+			real32 UpdateHz = ((real32)MonitorRefreshHz / 2.0f);
+			real32 TargetSecondsPerFrame = 1.0f / UpdateHz;
+			//
+			GlobalRunning=1;
 			//
 #if MARCY_DEBUG
 			LPVOID BaseAddress = (LPVOID)Terabytes(2);
@@ -418,20 +423,21 @@ WinMain(
 					}
 					//
 					for(int ButtonIndex = 0; 
-						ButtonIndex < ArrayCount(Input->Buttons);
+						ButtonIndex < ArrayCount(Input->Keyboard.Buttons);
 						++ButtonIndex){
-						Input->Buttons[ButtonIndex].HalfTransitionCount=0;
+						Input->Keyboard.Buttons[ButtonIndex].HalfTransitionCount=0;
 					}
 					// windows messages
 					win32_ProcessPendingMessages(Input);
 					//
+					thread_context Thread = {};
 					offscreen_buffer Buffer = {};
 					Buffer.Memory = GlobalBackbuffer.Memory;
 					Buffer.Width = GlobalBackbuffer.Width;
 					Buffer.Height = GlobalBackbuffer.Height;
 					Buffer.Pitch = GlobalBackbuffer.Pitch;
 					if(MarcyCode.UpdateAndRender){
-						MarcyCode.UpdateAndRender(&Memory, Input, &Buffer);
+						MarcyCode.UpdateAndRender(&Thread, &Memory, Input, &Buffer);
 					}
 					//
 					LARGE_INTEGER WorkCounter = win32_GetWallClock();
